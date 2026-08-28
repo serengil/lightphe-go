@@ -102,24 +102,21 @@ home.
   )
 
   // Build an additively homomorphic cryptosystem on premises.
-  cs, err := lightphe.New(lightphe.Paillier)
+  cs, _ := lightphe.New(lightphe.Paillier)
 
   // Encrypt - no private key required.
-  salary, err := cs.EncryptInt(m1)
-  raise, err := cs.EncryptInt(m2)
+  salary, _ := cs.EncryptInt(m1)
+  raise, _ := cs.EncryptInt(m2)
   
   // Homomorphic addition - no private key required.
-  total, err := salary.Add(raise)
+  total, _ := salary.Add(raise)
 
   // Scalar multiplication - no private key required.
-  increased, err := salary.MultiplyByFloat(k)
+  increased, _ := salary.MultiplyByFloat(k)
 
   // Decryption - private key required.
-  sum, err := cs.Decrypt(total)
-  scaled, err := cs.Decrypt(increased)
-  if err != nil {
-      panic(err)
-  }
+  sum, _ := cs.Decrypt(total)
+  scaled, _ := cs.Decrypt(increased)
 
   // Decrypt returns *big.Int, so compare with Int64 (or Cmp for large values).
   if sum.Int64() != m1+m2 {
@@ -133,34 +130,34 @@ home.
 With a multiplicatively homomorphic cryptosystem you multiply ciphertexts instead:
 
 ```go
-  const (
-      m1 = 17
-      m2 = 21
-  )
+	const (
+		m1 = 17
+		m2 = 21
+	)
 
-  // Build a multiplicatively homomorphic cryptosystem on premises.
-  cs, err := lightphe.New(lightphe.RSA)
+	// Build a multiplicatively homomorphic cryptosystem on premises.
+	cs, _ := lightphe.New(lightphe.RSA)
 
-  // Encrypt - no private key required.
-  c1, err := cs.EncryptInt(m1)
-  c2, err := cs.EncryptInt(m2)
+	// Encrypt - no private key required.
+	c1, _ := cs.EncryptInt(m1)
+	c2, _ := cs.EncryptInt(m2)
 
-  // Homomorphic multiplication - no private key required.
-  product, err := c1.Multiply(c2)
+	// Homomorphic multiplication - no private key required.
+	product, _ := c1.Multiply(c2)
 
-  // Decryption - private key required.
-  m, err := cs.Decrypt(product)
+	// Decryption - private key required.
+	m, _ := cs.Decrypt(product)
 
-  // Assert decrypted value against expected calculation
-  if m.Int64() != m1*m2 {
-      panic("Homomorphic multiplication failed")
-  }
+	// Assert decrypted value against expected calculation
+	if m.Int64() != m1*m2 {
+		panic("Homomorphic multiplication failed")
+	}
 
-  // Asking a scheme for an operation it does not support returns an error you can test for
-  _, err = c1.Add(c2)
-  if !errors.Is(err, lightphe.ErrUnsupportedOperation) {
-      panic("Expected ErrUnsupportedOperation for addition in RSA")
-  }
+	// Asking a scheme for an operation it does not support returns an error you can test for
+	_, err := c1.Add(c2)
+	if !errors.Is(err, lightphe.ErrUnsupportedOperation) {
+		panic("Expected ErrUnsupportedOperation for addition in RSA")
+	}
 ```
 
 ### Ciphertext regeneration
@@ -169,7 +166,7 @@ Most schemes can re-randomise a ciphertext without changing the plaintext behind
 observations harder to correlate.
 
 ```go
-refreshed, err := cs.RegenerateCiphertext(c1)
+refreshed, _ := cs.RegenerateCiphertext(c1)
 // refreshed.Value differs from c1.Value, but both decrypt to the same message
 ```
 
@@ -178,35 +175,29 @@ refreshed, err := cs.RegenerateCiphertext(c1)
 Export the public key, hand it to the evaluator, and keep the private key at home.
 
 ```go
-// On premises.
-cs, err := lightphe.New(lightphe.Paillier)
-err = cs.ExportKeys("public.json", true)   // public key only
-err = cs.ExportKeys("private.json", false) // includes the private key - protect it
+	// On premises.
+	cs, _ := lightphe.New(lightphe.Paillier)
+	_ = cs.ExportKeys("public.json", true)   // public key only
+	_ = cs.ExportKeys("private.json", false) // includes the private key - protect it
 
-// On the evaluator.
-cloud, err := lightphe.New(lightphe.Paillier, lightphe.WithKeyFile("public.json"))
-c1, err := cloud.EncryptInt(10000)
-c2, err := cloud.EncryptInt(500)
-result, err := c1.Add(c2)
-if err != nil {
-    panic(err)
-}
+	// On the evaluator.
+	cloud, _ := lightphe.New(lightphe.Paillier, lightphe.WithKeyFile("public.json"))
+	c1, _ := cloud.EncryptInt(10000)
+	c2, _ := cloud.EncryptInt(500)
+	result, _ := c1.Add(c2)
 
-// The evaluator holds no private key, so it cannot read what it just computed.
-_, err = cloud.Decrypt(result)
-if !errors.Is(err, lightphe.ErrMissingPrivateKey) {
-    panic("expected ErrMissingPrivateKey")
-}
+	// The evaluator holds no private key, so it cannot read what it just computed.
+	_, err := cloud.Decrypt(result)
+	if !errors.Is(err, lightphe.ErrMissingPrivateKey) {
+		panic("expected ErrMissingPrivateKey")
+	}
 
-// Back on premises.
-onprem, err := lightphe.New(lightphe.Paillier, lightphe.WithKeyFile("private.json"))
-m, err := onprem.Decrypt(result)
-if err != nil {
-    panic(err)
-}
-if m.Int64() != 10500 {
-    panic("homomorphic addition failed")
-}
+	// Back on premises.
+	onprem, _ := lightphe.New(lightphe.Paillier, lightphe.WithKeyFile("private.json"))
+	m, _ := onprem.Decrypt(result)
+	if m.Int64() != 10500 {
+		panic("homomorphic addition failed")
+	}
 ```
 
 ### Elliptic curve cryptography
@@ -256,20 +247,6 @@ sum, err := c1.Add(c2)                  // element-wise addition
 scaled, err := c1.MultiplyByConstant(3) // scalar multiplication
 products, err := c1.MultiplyByPlain(t3) // element-wise product with a plain vector
 similarity, err := c1.Dot(t3)           // encrypted dot product, i.e. cosine similarity
-if err != nil {
-    panic(err)
-}
-
-// Every result decrypts the same way.
-for _, t := range []*lightphe.Tensor{sum, scaled, products, similarity} {
-    values, err := cs.DecryptTensor(t)
-    if err != nil {
-        panic(err)
-    }
-    if len(values) == 0 {
-        panic("empty tensor")
-    }
-}
 ```
 
 Real numbers are stored as a scaled integer over an encrypted scale factor, with the sign kept in
