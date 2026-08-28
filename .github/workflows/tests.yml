@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/tests.yml'
+      - '**/*.go'
+      - 'go.mod'
+      - 'Makefile'
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.17', 'stable']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)" || (gofmt -l . && exit 1)
+
+      - name: Vet
+        run: go vet ./...
+
+      # - name: Test
+      #   run: go test ./... -v

@@ -1,0 +1,31 @@
+# Binaries and compiled objects
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.a
+*.o
+/bin/
+/dist/
+
+# Test and coverage artifacts
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Exported key material - never commit these
+*.lphe
+*_secret.json
+*_public.json
+
+# Go workspace / tooling
+go.work
+go.work.sum
+vendor/
+
+# Editors and OS noise
+.idea/
+.vscode/
+.DS_Store
