@@ -7,10 +7,6 @@ on:
       - '**/*.go'
       - 'go.mod'
       - 'Makefile'
-  push:
-    branches:
-      - main
-
 jobs:
   test:
     runs-on: ubuntu-latest
