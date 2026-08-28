@@ -1,5 +1,13 @@
 # lightphe-go
 
+<div align="center">
+
+[![Stars](https://img.shields.io/github/stars/serengil/lightphe-go?color=yellow&style=flat&label=%E2%AD%90%20stars)](https://github.com/serengil/lightphe-go/stargazers)
+[![License](http://img.shields.io/:license-MIT-green.svg?style=flat)](https://github.com/serengil/lightphe-go/blob/main/LICENSE)
+[![DOI](http://img.shields.io/:DOI-10.3390/sym18050832-blue.svg?style=flat)](https://www.mdpi.com/2073-8994/18/5/832)
+
+</div>
+
 `lightphe-go` is a lightweight homomorphic encryption library for Go supporting various partially
 and somewhat homomorphic encryption schemes such as
 [`RSA`](https://sefiks.com/2023/03/06/a-step-by-step-partially-homomorphic-encryption-example-with-rsa-in-python/),
