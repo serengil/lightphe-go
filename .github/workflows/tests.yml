@@ -7,16 +7,12 @@ on:
       - '**/*.go'
       - 'go.mod'
       - 'Makefile'
-  push:
-    branches:
-      - main
-
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ['1.17', 'stable']
+        go-version: ['stable']
 
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +27,3 @@ jobs:
 
       - name: Vet
         run: go vet ./...
-
-      # - name: Test
-      #   run: go test ./... -v
