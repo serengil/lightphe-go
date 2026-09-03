@@ -8,6 +8,8 @@
 
 </div>
 
+<p align="center"><img src="https://raw.githubusercontent.com/serengil/lightphe-go/main/images/lightphe-go-mascot.jpg" width="30%"></p>
+
 `lightphe-go` is a lightweight homomorphic encryption library for Go supporting various partially
 and somewhat homomorphic encryption schemes such as
 [`RSA`](https://sefiks.com/2023/03/06/a-step-by-step-partially-homomorphic-encryption-example-with-rsa-in-python/),
