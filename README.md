@@ -275,6 +275,17 @@ be shared freely between goroutines.
 All PRs are welcome. If you are planning a large patch, open an issue first so the design
 questions get settled up front.
 
+## LightPHE Ecosystem
+
+`LightPHE` is available across multiple programming languages with consistent APIs and native performance for each ecosystem. Choose the port that fits your stack:
+
+| Language | Repository | Ecosystem Focus |
+| :--- | :--- | :--- |
+| **Python** | [`serengil/lightphe`](https://github.com/serengil/lightphe) | AI, Research & Prototyping |
+| **Go** | [`serengil/lightphe-go`](https://github.com/serengil/lightphe-go) | Cloud-Native & High-Throughput Microservices |
+| **Java** | [`serengil/lightphe4j`](https://github.com/serengil/lightphe4j) | Enterprise, Banking & Legacy Systems |
+| **TypeScript** | [`serengil/lightphe-ts`](https://github.com/serengil/lightphe-ts) | Client-Side Privacy & Node.js Backend |
+
 ## Citation
 
 Please cite LightPHE in your publications if it helps your research:
