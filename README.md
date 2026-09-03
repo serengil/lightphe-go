@@ -211,7 +211,7 @@ Export the public key, hand it to the evaluator, and keep the private key at hom
 ### Elliptic curve cryptography
 
 The `ecc` package implements curve arithmetic over prime and binary fields in three forms —
-Weierstrass, twisted Edwards and Koblitz — across 140+ standard curves, plus the Weil and modified
+Weierstrass, twisted Edwards and Koblitz — across 100+ standard curves, plus the Weil and modified
 Tate pairings. Elliptic curve ElGamal builds on it:
 
 ```go
@@ -235,6 +235,8 @@ slower one. Pick it for your threat model, not by default.
 Note that elliptic curve ElGamal decrypts by solving an elliptic curve discrete logarithm, so it
 is only practical for small plaintexts. The same caveat applies to exponential ElGamal, Benaloh
 and Naccache-Stern.
+
+See [`curves`](https://github.com/serengil/LightECC#supported-curves) page for a list of all supported forms, curves and their details.
 
 ### Vector embeddings
 
@@ -278,7 +280,7 @@ questions get settled up front.
 Please cite LightPHE in your publications if it helps your research:
 
 ```BibTeX
-@article{sym18050832,
+@article{lightphego,
   title          = {Sustainable Cryptography: Carbon Asymmetry in Partially Homomorphic Encryption in the Cloud},
   author         = {Ozpinar, Alper and Serengil, Sefik Ilkin},
   journal        = {Symmetry},
