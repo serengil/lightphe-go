@@ -283,10 +283,10 @@ questions get settled up front.
 
 | Language | Repository | Ecosystem Focus |
 | :--- | :--- | :--- |
-| **Python** | [`serengil/lightphe`](https://github.com/serengil/lightphe) | AI, Research & Prototyping |
-| **Go** | [`serengil/lightphe-go`](https://github.com/serengil/lightphe-go) | Cloud-Native & High-Throughput Microservices |
-| **Java** | [`serengil/lightphe4j`](https://github.com/serengil/lightphe4j) | Enterprise, Banking & Legacy Systems |
-| **TypeScript** | [`serengil/lightphe-ts`](https://github.com/serengil/lightphe-ts) | Client-Side Privacy & Node.js Backend |
+| **Python** | [`lightphe`](https://github.com/serengil/lightphe) | AI, Research & Prototyping |
+| **Go** | [`lightphe-go`](https://github.com/serengil/lightphe-go) | Cloud-Native & High-Throughput Microservices |
+| **Java** | [`lightphe4j`](https://github.com/serengil/lightphe4j) | Enterprise, Banking & Legacy Systems |
+| **TypeScript** | [`lightphe-ts`](https://github.com/serengil/lightphe-ts) | Client-Side Privacy & Node.js Backend |
 
 ## Citation
 
