@@ -2,9 +2,11 @@ package encrypted
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/serengil/lightphe-go/lightphe/internal/fixedpoint"
 	"github.com/serengil/lightphe-go/lightphe/phe"
+	"github.com/serengil/lightphe-go/lightphe/schemes/joyelibert"
 )
 
 // Fraction is one element of an encrypted tensor. Real numbers are stored as a
@@ -142,6 +144,9 @@ func (t *Tensor) Multiply(other *Tensor) (*Tensor, error) {
 // than 7.3521. Integer-valued elements, and constants whose denominator divides
 // the scale factor, are exact.
 func (t *Tensor) MultiplyByConstant(constant float64) (*Tensor, error) {
+	if t.cs.Algorithm() == phe.JoyeLibert && constant != math.Trunc(constant) {
+		return nil, joyelibert.ErrFloatNotSupported
+	}
 	sign := 1
 	if constant < 0 {
 		sign = -1

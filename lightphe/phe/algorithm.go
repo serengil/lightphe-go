@@ -7,18 +7,21 @@ type Algorithm string
 
 // Supported cryptosystems.
 const (
-	RSA                  Algorithm = "RSA"
-	ElGamal              Algorithm = "ElGamal"
-	ExponentialElGamal   Algorithm = "Exponential-ElGamal"
-	EllipticCurveElGamal Algorithm = "EllipticCurve-ElGamal"
-	Paillier             Algorithm = "Paillier"
-	DamgardJurik         Algorithm = "Damgard-Jurik"
-	OkamotoUchiyama      Algorithm = "Okamoto-Uchiyama"
-	Benaloh              Algorithm = "Benaloh"
-	NaccacheStern        Algorithm = "Naccache-Stern"
-	GoldwasserMicali     Algorithm = "Goldwasser-Micali"
-	SanderYoungYung      Algorithm = "Sander-Young-Yung"
-	BonehGohNissim       Algorithm = "Boneh-Goh-Nissim"
+	RSA                   Algorithm = "RSA"
+	ElGamal               Algorithm = "ElGamal"
+	ExponentialElGamal    Algorithm = "Exponential-ElGamal"
+	EllipticCurveElGamal  Algorithm = "EllipticCurve-ElGamal"
+	Paillier              Algorithm = "Paillier"
+	DamgardJurik          Algorithm = "Damgard-Jurik"
+	OkamotoUchiyama       Algorithm = "Okamoto-Uchiyama"
+	Benaloh               Algorithm = "Benaloh"
+	NaccacheStern         Algorithm = "Naccache-Stern"
+	GoldwasserMicali      Algorithm = "Goldwasser-Micali"
+	SanderYoungYung       Algorithm = "Sander-Young-Yung"
+	BonehGohNissim        Algorithm = "Boneh-Goh-Nissim"
+	JoyeLibert            Algorithm = "Joye-Libert"
+	CastagnosLaguillaumie Algorithm = "Castagnos-Laguillaumie"
+	IshaiPaskin           Algorithm = "Ishai-Paskin"
 )
 
 // String implements fmt.Stringer.
@@ -39,5 +42,8 @@ func Algorithms() []Algorithm {
 		GoldwasserMicali,
 		SanderYoungYung,
 		BonehGohNissim,
+		JoyeLibert,
+		CastagnosLaguillaumie,
+		IshaiPaskin,
 	}
 }

@@ -8,10 +8,12 @@
 package encrypted
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/serengil/lightphe-go/lightphe/internal/fixedpoint"
 	"github.com/serengil/lightphe-go/lightphe/phe"
+	"github.com/serengil/lightphe-go/lightphe/schemes/joyelibert"
 )
 
 // Ciphertext is an encrypted message together with the public cryptosystem
@@ -84,6 +86,9 @@ func (c *Ciphertext) MultiplyByInt(constant int64) (*Ciphertext, error) {
 // MultiplyByFloat evaluates E(m * k) for a known non-negative float k, which is
 // mapped onto the message space as a modular fraction first.
 func (c *Ciphertext) MultiplyByFloat(constant float64) (*Ciphertext, error) {
+	if c.cs.Algorithm() == phe.JoyeLibert && constant != math.Trunc(constant) {
+		return nil, joyelibert.ErrFloatNotSupported
+	}
 	k, err := fixedpoint.Normalize(constant, c.cs.PlaintextModulo())
 	if err != nil {
 		return nil, err

@@ -59,6 +59,13 @@ type Homomorphic interface {
 
 	// Reencrypt returns a different ciphertext for the same plaintext.
 	Reencrypt(ciphertext Value) (Value, error)
+
+	// EncryptDecisionTreeInput encrypts the input bits of a decision tree for
+	// trees up to the given depth.
+	EncryptDecisionTreeInput(bits []int, depth int) ([][]*big.Int, error)
+
+	// EvaluateDecisionTree evaluates a decision tree on encrypted input bits.
+	EvaluateDecisionTree(tree *DecisionTree, encryptedInput [][]*big.Int) (Value, error)
 }
 
 // Base supplies the default, "not homomorphic with respect to this operation"
@@ -100,6 +107,18 @@ func (b Base) And(_, _ Value) (Value, error) {
 // Reencrypt implements Homomorphic by reporting the operation as unsupported.
 func (b Base) Reencrypt(_ Value) (Value, error) {
 	return nil, Unsupportedf(b.Alg, OpReencryption)
+}
+
+// EncryptDecisionTreeInput implements Homomorphic by reporting the operation
+// as unsupported.
+func (b Base) EncryptDecisionTreeInput(_ []int, _ int) ([][]*big.Int, error) {
+	return nil, Unsupportedf(b.Alg, OpDecisionTree)
+}
+
+// EvaluateDecisionTree implements Homomorphic by reporting the operation as
+// unsupported.
+func (b Base) EvaluateDecisionTree(_ *DecisionTree, _ [][]*big.Int) (Value, error) {
+	return nil, Unsupportedf(b.Alg, OpDecisionTree)
 }
 
 // Normalize reduces value into [0, modulo). It accepts negative inputs, which

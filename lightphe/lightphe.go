@@ -28,6 +28,7 @@ package lightphe
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"runtime"
@@ -38,10 +39,13 @@ import (
 	"github.com/serengil/lightphe-go/lightphe/phe"
 	"github.com/serengil/lightphe-go/lightphe/schemes/benaloh"
 	"github.com/serengil/lightphe-go/lightphe/schemes/bonehgohnissim"
+	"github.com/serengil/lightphe-go/lightphe/schemes/castagnoslaguillaumie"
 	"github.com/serengil/lightphe-go/lightphe/schemes/damgardjurik"
 	"github.com/serengil/lightphe-go/lightphe/schemes/ecelgamal"
 	"github.com/serengil/lightphe-go/lightphe/schemes/elgamal"
 	"github.com/serengil/lightphe-go/lightphe/schemes/goldwassermicali"
+	"github.com/serengil/lightphe-go/lightphe/schemes/ishaipaskin"
+	"github.com/serengil/lightphe-go/lightphe/schemes/joyelibert"
 	"github.com/serengil/lightphe-go/lightphe/schemes/naccachestern"
 	"github.com/serengil/lightphe-go/lightphe/schemes/okamotouchiyama"
 	"github.com/serengil/lightphe-go/lightphe/schemes/paillier"
@@ -82,7 +86,20 @@ type (
 
 	// Homomorphic is the contract every cryptosystem implements.
 	Homomorphic = phe.Homomorphic
+
+	// DecisionTree is a decision tree evaluated by Ishai-Paskin. Build one with
+	// Leaf and Node.
+	DecisionTree = phe.DecisionTree
 )
+
+// Leaf builds a decision tree leaf that outputs value.
+func Leaf(value int64) *DecisionTree { return phe.Leaf(value) }
+
+// Node builds a decision tree node that continues with ifZero when the input
+// bit at variable is 0, and with ifOne when it is 1.
+func Node(variable int, ifZero, ifOne *DecisionTree) *DecisionTree {
+	return phe.Node(variable, ifZero, ifOne)
+}
 
 // Aliases for the encrypted values in package encrypted.
 type (
@@ -99,18 +116,21 @@ type (
 
 // Supported cryptosystems.
 const (
-	RSA                  = phe.RSA
-	ElGamal              = phe.ElGamal
-	ExponentialElGamal   = phe.ExponentialElGamal
-	EllipticCurveElGamal = phe.EllipticCurveElGamal
-	Paillier             = phe.Paillier
-	DamgardJurik         = phe.DamgardJurik
-	OkamotoUchiyama      = phe.OkamotoUchiyama
-	Benaloh              = phe.Benaloh
-	NaccacheStern        = phe.NaccacheStern
-	GoldwasserMicali     = phe.GoldwasserMicali
-	SanderYoungYung      = phe.SanderYoungYung
-	BonehGohNissim       = phe.BonehGohNissim
+	RSA                   = phe.RSA
+	ElGamal               = phe.ElGamal
+	ExponentialElGamal    = phe.ExponentialElGamal
+	EllipticCurveElGamal  = phe.EllipticCurveElGamal
+	Paillier              = phe.Paillier
+	DamgardJurik          = phe.DamgardJurik
+	OkamotoUchiyama       = phe.OkamotoUchiyama
+	Benaloh               = phe.Benaloh
+	NaccacheStern         = phe.NaccacheStern
+	GoldwasserMicali      = phe.GoldwasserMicali
+	SanderYoungYung       = phe.SanderYoungYung
+	BonehGohNissim        = phe.BonehGohNissim
+	JoyeLibert            = phe.JoyeLibert
+	CastagnosLaguillaumie = phe.CastagnosLaguillaumie
+	IshaiPaskin           = phe.IshaiPaskin
 )
 
 // Sentinel errors, re-exported so that errors.Is works without importing phe.
@@ -122,6 +142,7 @@ var (
 	ErrInvalidCiphertext    = phe.ErrInvalidCiphertext
 	ErrKeyGeneration        = phe.ErrKeyGeneration
 	ErrDecryptionFailed     = phe.ErrDecryptionFailed
+	ErrFloatNotSupported    = joyelibert.ErrFloatNotSupported
 )
 
 // Algorithms lists every cryptosystem this library ships with.
@@ -189,7 +210,8 @@ func WithPlaintextLimit(limit *big.Int) Option {
 
 // WithMaxTries bounds the randomized search during key generation. It only
 // affects the schemes whose key generation can fail and retry: RSA, Benaloh,
-// Naccache-Stern, Goldwasser-Micali, Sander-Young-Yung and Boneh-Goh-Nissim.
+// Naccache-Stern, Goldwasser-Micali, Sander-Young-Yung, Boneh-Goh-Nissim,
+// Joye-Libert and Castagnos-Laguillaumie.
 func WithMaxTries(tries int) Option {
 	return func(c *config) { c.maxTries = tries }
 }
@@ -333,6 +355,24 @@ func build(algorithm phe.Algorithm, cfg *config) (phe.Homomorphic, error) {
 		}
 		return bonehgohnissim.Generate(cfg.keySize, cfg.maxTries)
 
+	case phe.JoyeLibert:
+		if restoring {
+			return joyelibert.FromJSON(cfg.keys)
+		}
+		return joyelibert.Generate(cfg.keySize, cfg.maxTries)
+
+	case phe.CastagnosLaguillaumie:
+		if restoring {
+			return castagnoslaguillaumie.FromJSON(cfg.keys)
+		}
+		return castagnoslaguillaumie.Generate(cfg.keySize, cfg.maxTries)
+
+	case phe.IshaiPaskin:
+		if restoring {
+			return ishaipaskin.FromJSON(cfg.keys)
+		}
+		return ishaipaskin.Generate(cfg.keySize)
+
 	default:
 		return nil, fmt.Errorf("lightphe: unimplemented algorithm %q", algorithm)
 	}
@@ -382,6 +422,9 @@ func (c *Cryptosystem) EncryptInt(plaintext int64) (*encrypted.Ciphertext, error
 // it yields the scaled integer, so the caller has to interpret it in the same
 // fixed point terms. For vectors of floats, prefer EncryptTensor.
 func (c *Cryptosystem) EncryptFloat(plaintext float64) (*encrypted.Ciphertext, error) {
+	if c.algorithm == phe.JoyeLibert && plaintext != math.Trunc(plaintext) {
+		return nil, joyelibert.ErrFloatNotSupported
+	}
 	m, err := fixedpoint.Normalize(plaintext, c.cs.PlaintextModulo())
 	if err != nil {
 		return nil, err
@@ -419,6 +462,28 @@ func (c *Cryptosystem) RegenerateCiphertext(ciphertext *encrypted.Ciphertext) (*
 // payloads over the wire gets back into the API.
 func (c *Cryptosystem) CreateCiphertext(value phe.Value) *encrypted.Ciphertext {
 	return encrypted.NewCiphertext(c.public, value)
+}
+
+// ---------------------------------------------------------------------------
+// Decision trees
+// ---------------------------------------------------------------------------
+
+// EncryptDecisionTreeInput encrypts the input bits (answers to the questions)
+// of a decision tree. depth is the maximum number of decisions on a path of
+// the tree. Only Ishai-Paskin supports this.
+func (c *Cryptosystem) EncryptDecisionTreeInput(bits []int, depth int) ([][]*big.Int, error) {
+	return c.cs.EncryptDecisionTreeInput(bits, depth)
+}
+
+// EvaluateDecisionTree evaluates a decision tree on encrypted input and
+// returns its encrypted output. The private key is not required. Only
+// Ishai-Paskin supports this.
+func (c *Cryptosystem) EvaluateDecisionTree(tree *DecisionTree, encryptedInput [][]*big.Int) (*encrypted.Ciphertext, error) {
+	value, err := c.public.EvaluateDecisionTree(tree, encryptedInput)
+	if err != nil {
+		return nil, err
+	}
+	return encrypted.NewCiphertext(c.public, value), nil
 }
 
 // ---------------------------------------------------------------------------

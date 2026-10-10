@@ -26,7 +26,8 @@ and somewhat homomorphic encryption schemes such as
 [`Naccache–Stern`](https://sefiks.com/2023/10/26/a-step-by-step-partially-homomorphic-encryption-example-with-naccache-stern-in-python/),
 [`Goldwasser–Micali`](https://sefiks.com/2023/10/27/a-step-by-step-partially-homomorphic-encryption-example-with-goldwasser-micali-in-python/),
 [`Sander-Young-Yung`](https://sefiks.com/2026/04/02/a-step-by-step-partially-homomorphic-sander-young-yung-example-in-python/),
-[`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/).
+[`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/),
+`Joye-Libert`, `Castagnos-Laguillaumie`, `Ishai-Paskin`.
 
 It is a pure Go port of [LightPHE](https://github.com/serengil/LightPHE), with the elliptic curve
 arithmetic of [LightECC](https://github.com/serengil/LightECC) folded in.
@@ -69,20 +70,23 @@ Requires Go 1.17 or newer.
 
 ## Supported cryptosystems
 
-| Algorithm | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext |
-| --- | --- | --- | --- | --- | --- | --- |
-| RSA | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| ElGamal | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| ExponentialElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| EllipticCurveElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Paillier | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| DamgardJurik | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| Benaloh | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| NaccacheStern | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| OkamotoUchiyama | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ |
-| GoldwasserMicali | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ |
-| SanderYoungYung | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
-| BonehGohNissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| Algorithm | Multiplicatively<br>Homomorphic | Additively<br>Homomorphic | Scalar Multiplication | Bitwise-XOR Homomorphic | Bitwise-AND Homomorphic | Regeneration<br>of Ciphertext | Decision Tree<br>Evaluation |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| RSA | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| ElGamal | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| ExponentialElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| EllipticCurveElGamal | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Paillier | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| DamgardJurik | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| Benaloh | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| NaccacheStern | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| OkamotoUchiyama | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| JoyeLibert | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| CastagnosLaguillaumie | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| IshaiPaskin | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+| GoldwasserMicali | ❌ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| SanderYoungYung | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| BonehGohNissim | 1️⃣ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
 
 ## Building a cryptosystem
 
@@ -239,6 +243,72 @@ is only practical for small plaintexts. The same caveat applies to exponential E
 and Naccache-Stern.
 
 See [`curves`](https://github.com/serengil/LightECC#supported-curves) page for a list of all supported forms, curves and their details.
+
+### Decision trees
+
+Ishai-Paskin solves a different problem than the algorithms above. Suppose a bank has a secret
+decision tree that decides a customer's credit limit, and a customer has private yes / no answers.
+The bank does not want to reveal its tree, and the customer does not want to reveal their answers.
+With Ishai-Paskin, the customer sends encrypted answers, the bank runs its tree on them without
+seeing them, and only the customer can decrypt the result. The customer learns the credit limit
+but not the rest of the tree.
+
+Let the bank's tree be the following, where questions are numbered 0, 1 and 2 and leaves are
+credit limits in thousand dollars.
+
+```
+                  Q0: has stable income?
+                 /no                    \yes
+     Q2: owns a house?              Q1: has existing debt?
+       /no        \yes               /no           \yes
+      0            5               20         Q2: owns a house?
+                                                /no       \yes
+                                               5          10
+```
+
+Each question is written as `Node(question number, what to do if no, what to do if yes)`, and
+leaves are `Leaf(value)`. So, the tree above becomes:
+
+```go
+leaf, node := lightphe.Leaf, lightphe.Node
+
+creditLimitTree := node(0,
+    node(2, leaf(0), leaf(5)),
+    node(1, leaf(20), node(2, leaf(5), leaf(10))),
+)
+```
+
+Then, the customer and the bank run the following steps.
+
+```go
+// customer builds the cryptosystem and keeps the private key
+customerCs, _ := lightphe.New(lightphe.IshaiPaskin)
+
+// customer shares only the public key with the bank
+_ = customerCs.ExportKeys("public.txt", true)
+
+// customer's answers: stable income = yes, existing debt = yes, owns a house = no
+answers := []int{1, 1, 0}
+
+// customer encrypts the answers and sends them to the bank. depth is the maximum
+// number of questions on a path of the tree, the bank should share this value
+encryptedAnswers, _ := customerCs.EncryptDecisionTreeInput(answers, 3)
+
+// bank builds its own cryptosystem with the customer's public key
+bankCs, _ := lightphe.New(lightphe.IshaiPaskin, lightphe.WithKeyFile("public.txt"))
+
+// bank runs its tree on encrypted answers and sends the result back to the customer
+encryptedLimit, _ := bankCs.EvaluateDecisionTree(creditLimitTree, encryptedAnswers)
+
+// customer decrypts the result - only the customer has the private key
+limit, _ := customerCs.Decrypt(encryptedLimit)
+if limit.Int64() != 5 {
+    panic("decision tree evaluation failed")
+}
+```
+
+The size of the result grows with the depth of the tree, not with the number of its nodes. Still,
+each extra level makes the computation noticeably slower, so this is practical for shallow trees.
 
 ### Vector embeddings
 
