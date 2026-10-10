@@ -41,6 +41,7 @@ const (
 	OpBitwiseAnd          = "bitwise and"
 	OpScalarMultiplcation = "multiplication by a known constant"
 	OpReencryption        = "re-encryption"
+	OpDecisionTree        = "evaluating decision trees"
 )
 
 // Unsupportedf builds an ErrUnsupportedOperation for the given algorithm and

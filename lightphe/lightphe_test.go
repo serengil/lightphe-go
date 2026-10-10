@@ -707,6 +707,9 @@ func restoreCases() []restoreCase {
 			b := new(big.Int).Mod(big.NewInt(restoreM2), m)
 			return new(big.Int).And(a, b)
 		}},
+		{phe.JoyeLibert, small, addition, sum},
+		{phe.CastagnosLaguillaumie, small, addition, sum},
+		{phe.IshaiPaskin, small, addition, sum},
 	}
 }
 
@@ -866,6 +869,9 @@ func keyFieldCases() []keyFieldCase {
 		{phe.GoldwasserMicali, small, "n", "p"},
 		{phe.SanderYoungYung, small, "n", "p"},
 		{phe.BonehGohNissim, small, "curve", "q1"},
+		{phe.JoyeLibert, small, "y", "p"},
+		{phe.CastagnosLaguillaumie, small, "g", "x"},
+		{phe.IshaiPaskin, small, "g", "phi"},
 	}
 }
 
