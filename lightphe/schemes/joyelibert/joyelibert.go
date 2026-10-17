@@ -12,7 +12,6 @@ package joyelibert
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -29,7 +28,7 @@ const (
 // ErrFloatNotSupported reports a float plaintext or constant. Floats are
 // represented as dividend * divisor^-1 where the divisor is a power of 10, but
 // powers of 10 are not invertible in the plaintext space Z_{2^k}.
-var ErrFloatNotSupported = errors.New("lightphe: Joye-Libert does not support float values because its " +
+var ErrFloatNotSupported = phe.FloatNotSupported("lightphe: Joye-Libert does not support float values because its " +
 	"plaintext space is Z_{2^k} where powers of 10 have no modular inverse. Use integers instead")
 
 // PublicKey is the Joye-Libert public key. Y is a quadratic non-residue modulo

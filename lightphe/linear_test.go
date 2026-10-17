@@ -9,9 +9,19 @@ import (
 	"github.com/serengil/lightphe-go/lightphe/phe"
 )
 
-// Joye-Libert and Castagnos-Laguillaumie are both additively homomorphic with
-// a decryption that needs no brute force, so they share one set of tests.
-var linearAlgorithms = []phe.Algorithm{phe.JoyeLibert, phe.CastagnosLaguillaumie}
+// These are all additively homomorphic over a large plaintext space with a
+// decryption that needs no brute force, so they share one set of tests.
+var linearAlgorithms = []phe.Algorithm{
+	phe.JoyeLibert,
+	phe.CastagnosLaguillaumie,
+	phe.EllipticCurvePaillier,
+	phe.BressonCatalanoPointcheval,
+	phe.CamenischShoup,
+}
+
+// smallSpaceAlgorithms have a plaintext space small enough to walk entirely
+// with small keys.
+var smallSpaceAlgorithms = []phe.Algorithm{phe.JoyeLibert, phe.CastagnosLaguillaumie}
 
 func TestLinearSchemesAPI(t *testing.T) {
 	for _, alg := range linearAlgorithms {
@@ -87,7 +97,7 @@ func TestLinearSchemesAPI(t *testing.T) {
 }
 
 func TestLinearSchemesRestoreEveryPlaintextOfSmallKeySpace(t *testing.T) {
-	for _, alg := range linearAlgorithms {
+	for _, alg := range smallSpaceAlgorithms {
 		alg := alg
 		t.Run(alg.String(), func(t *testing.T) {
 			t.Parallel()

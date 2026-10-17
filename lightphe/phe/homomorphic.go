@@ -112,7 +112,7 @@ func (b Base) Reencrypt(_ Value) (Value, error) {
 // EncryptDecisionTreeInput implements Homomorphic by reporting the operation
 // as unsupported.
 func (b Base) EncryptDecisionTreeInput(_ []int, _ int) ([][]*big.Int, error) {
-	return nil, Unsupportedf(b.Alg, OpDecisionTree)
+	return nil, Unsupportedf(b.Alg, OpDecisionTreeInput)
 }
 
 // EvaluateDecisionTree implements Homomorphic by reporting the operation as

@@ -710,6 +710,21 @@ func restoreCases() []restoreCase {
 		{phe.JoyeLibert, small, addition, sum},
 		{phe.CastagnosLaguillaumie, small, addition, sum},
 		{phe.IshaiPaskin, small, addition, sum},
+		{phe.DamgardGeislerKroigaard, small, addition, sum},
+		{phe.BressonCatalanoPointcheval, small, addition, sum},
+		{phe.CamenischShoup, small, addition, sum},
+		{phe.EllipticCurvePaillier, small, addition, sum},
+		{phe.Regev, small, addition, sum},
+		{phe.BrakerskiVaikuntanathan, []lightphe.Option{lightphe.WithKeySize(64)}, multiplication, func(m *big.Int) *big.Int {
+			return new(big.Int).Mod(big.NewInt(restoreM1*restoreM2), m)
+		}},
+		{phe.FreemanBonehGohNissim, []lightphe.Option{lightphe.WithKeySize(64)}, multiplication, func(m *big.Int) *big.Int {
+			return new(big.Int).Mod(big.NewInt(restoreM1*restoreM2), m)
+		}},
+		{phe.GentryHaleviVaikuntanathan, []lightphe.Option{lightphe.WithKeySize(2), lightphe.WithPlaintextLimit(big.NewInt(10007))},
+			multiplication, func(m *big.Int) *big.Int {
+				return new(big.Int).Mod(big.NewInt(restoreM1*restoreM2), m)
+			}},
 	}
 }
 
@@ -872,6 +887,16 @@ func keyFieldCases() []keyFieldCase {
 		{phe.JoyeLibert, small, "y", "p"},
 		{phe.CastagnosLaguillaumie, small, "g", "x"},
 		{phe.IshaiPaskin, small, "g", "phi"},
+		{phe.DamgardGeislerKroigaard, small, "h", "v_p"},
+		// a private key having the master trapdoor only is accepted, see
+		// TestAlternativePrivateKeyIsAccepted
+		{phe.BressonCatalanoPointcheval, small, "h", ""},
+		{phe.CamenischShoup, small, "n_bar", "x1"},
+		{phe.EllipticCurvePaillier, small, "g", "order"},
+		{phe.Regev, small, "seed", "s"},
+		{phe.BrakerskiVaikuntanathan, []lightphe.Option{lightphe.WithKeySize(64)}, "seed", "s"},
+		{phe.FreemanBonehGohNissim, []lightphe.Option{lightphe.WithKeySize(64)}, "h1", "v"},
+		{phe.GentryHaleviVaikuntanathan, []lightphe.Option{lightphe.WithKeySize(2)}, "A", "T"},
 	}
 }
 
@@ -891,6 +916,9 @@ func TestMissingKeyFieldsAreRejected(t *testing.T) {
 				"public_key":  tc.publicField,
 				"private_key": tc.privateField,
 			} {
+				if field == "" {
+					continue
+				}
 				broken := withoutField(t, keys, section, field)
 				if _, err := lightphe.New(tc.alg, lightphe.WithKeys(broken)); !errors.Is(err, phe.ErrInvalidKeys) {
 					t.Fatalf("dropping %s.%s returned %v, want ErrInvalidKeys", section, field, err)
@@ -900,6 +928,25 @@ func TestMissingKeyFieldsAreRejected(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAlternativePrivateKeyIsAccepted(t *testing.T) {
+	// Bresson-Catalano-Pointcheval accepts a private key having the master
+	// trapdoor only
+	cs := mustBuild(t, phe.BressonCatalanoPointcheval, lightphe.WithKeySize(testKeySize))
+	keys, err := cs.Keys(false)
+	if err != nil {
+		t.Fatalf("exporting keys: %v", err)
+	}
+	masterOnly := withoutField(t, keys, "private_key", "a")
+	mustBuild(t, phe.BressonCatalanoPointcheval, lightphe.WithKeys(masterOnly))
+
+	// neither the required nor the alternative fields
+	broken := withoutField(t, masterOnly, "private_key", "q")
+	_, err = lightphe.New(phe.BressonCatalanoPointcheval, lightphe.WithKeys(broken))
+	if !errors.Is(err, phe.ErrInvalidKeys) || !bytes.Contains([]byte(err.Error()), []byte("alternatively")) {
+		t.Fatalf("dropping private_key.a and private_key.q returned %v", err)
 	}
 }
 

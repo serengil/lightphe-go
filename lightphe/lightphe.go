@@ -1,7 +1,7 @@
 // Package lightphe is a lightweight partially homomorphic encryption library.
 //
-// It gathers a dozen partially and somewhat homomorphic cryptosystems behind
-// one interface, so that ciphertexts can be added, multiplied or combined
+// It gathers over twenty partially and somewhat homomorphic cryptosystems
+// behind one interface, so that ciphertexts can be added, multiplied or combined
 // bitwise by a party that never sees the private key. Everything is pure Go and
 // built on the standard library alone: math/big for the arithmetic and
 // crypto/rand for every random value.
@@ -34,27 +34,37 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/serengil/lightphe-go/lightphe/ecc"
 	"github.com/serengil/lightphe-go/lightphe/encrypted"
 	"github.com/serengil/lightphe-go/lightphe/internal/fixedpoint"
 	"github.com/serengil/lightphe-go/lightphe/phe"
 	"github.com/serengil/lightphe-go/lightphe/schemes/benaloh"
 	"github.com/serengil/lightphe-go/lightphe/schemes/bonehgohnissim"
+	"github.com/serengil/lightphe-go/lightphe/schemes/brakerskivaikuntanathan"
+	"github.com/serengil/lightphe-go/lightphe/schemes/bressoncatalanopointcheval"
+	"github.com/serengil/lightphe-go/lightphe/schemes/camenischshoup"
 	"github.com/serengil/lightphe-go/lightphe/schemes/castagnoslaguillaumie"
+	"github.com/serengil/lightphe-go/lightphe/schemes/catalanofiore"
+	"github.com/serengil/lightphe-go/lightphe/schemes/damgardgeislerkroigaard"
 	"github.com/serengil/lightphe-go/lightphe/schemes/damgardjurik"
 	"github.com/serengil/lightphe-go/lightphe/schemes/ecelgamal"
 	"github.com/serengil/lightphe-go/lightphe/schemes/elgamal"
+	"github.com/serengil/lightphe-go/lightphe/schemes/ellipticcurvepaillier"
+	"github.com/serengil/lightphe-go/lightphe/schemes/freemanbonehgohnissim"
+	"github.com/serengil/lightphe-go/lightphe/schemes/gentryhalevivaikuntanathan"
 	"github.com/serengil/lightphe-go/lightphe/schemes/goldwassermicali"
 	"github.com/serengil/lightphe-go/lightphe/schemes/ishaipaskin"
 	"github.com/serengil/lightphe-go/lightphe/schemes/joyelibert"
 	"github.com/serengil/lightphe-go/lightphe/schemes/naccachestern"
 	"github.com/serengil/lightphe-go/lightphe/schemes/okamotouchiyama"
 	"github.com/serengil/lightphe-go/lightphe/schemes/paillier"
+	"github.com/serengil/lightphe-go/lightphe/schemes/regev"
 	"github.com/serengil/lightphe-go/lightphe/schemes/rsa"
 	"github.com/serengil/lightphe-go/lightphe/schemes/sanderyoungyung"
 )
 
 // Version is the library version.
-const Version = "0.2.0"
+const Version = "0.3.0"
 
 // DefaultPrecision is the number of decimal digits kept when encrypting
 // floating point tensors.
@@ -90,6 +100,28 @@ type (
 	// DecisionTree is a decision tree evaluated by Ishai-Paskin. Build one with
 	// Leaf and Node.
 	DecisionTree = phe.DecisionTree
+
+	// NumericTree is a decision tree with numeric thresholds evaluated by
+	// Damgard-Geisler-Kroigaard. Build one with NumericLeaf and NumericNode.
+	NumericTree = phe.NumericTree
+
+	// DecisionTreeState is what the server keeps secret between the steps of
+	// a private decision tree evaluation with numeric thresholds.
+	DecisionTreeState = phe.DecisionTreeState
+
+	// EncryptedLeaf is a leaf of a private decision tree evaluation sent to
+	// the client.
+	EncryptedLeaf = phe.EncryptedLeaf
+
+	// ArgmaxMessage is a message the server sends to the client during
+	// encrypted argmax.
+	ArgmaxMessage = phe.ArgmaxMessage
+
+	// ArgmaxClient delivers a message to the client during encrypted argmax.
+	ArgmaxClient = phe.ArgmaxClient
+
+	// VerifiableCiphertext is the output of verifiable encryption.
+	VerifiableCiphertext = phe.VerifiableCiphertext
 )
 
 // Leaf builds a decision tree leaf that outputs value.
@@ -99,6 +131,16 @@ func Leaf(value int64) *DecisionTree { return phe.Leaf(value) }
 // bit at variable is 0, and with ifOne when it is 1.
 func Node(variable int, ifZero, ifOne *DecisionTree) *DecisionTree {
 	return phe.Node(variable, ifZero, ifOne)
+}
+
+// NumericLeaf builds a numeric decision tree leaf that outputs label.
+func NumericLeaf(label int64) *NumericTree { return phe.NumericLeaf(label) }
+
+// NumericNode builds a numeric decision tree node that continues with
+// ifLessOrEqual when the feature at index feature is less than or equal to
+// threshold, and with ifGreater otherwise.
+func NumericNode(feature int, threshold int64, ifLessOrEqual, ifGreater *NumericTree) *NumericTree {
+	return phe.NumericNode(feature, threshold, ifLessOrEqual, ifGreater)
 }
 
 // Aliases for the encrypted values in package encrypted.
@@ -131,7 +173,27 @@ const (
 	JoyeLibert            = phe.JoyeLibert
 	CastagnosLaguillaumie = phe.CastagnosLaguillaumie
 	IshaiPaskin           = phe.IshaiPaskin
+
+	DamgardGeislerKroigaard    = phe.DamgardGeislerKroigaard
+	BressonCatalanoPointcheval = phe.BressonCatalanoPointcheval
+	CamenischShoup             = phe.CamenischShoup
+	EllipticCurvePaillier      = phe.EllipticCurvePaillier
+	Regev                      = phe.Regev
+	BrakerskiVaikuntanathan    = phe.BrakerskiVaikuntanathan
+	FreemanBonehGohNissim      = phe.FreemanBonehGohNissim
+	GentryHaleviVaikuntanathan = phe.GentryHaleviVaikuntanathan
 )
+
+// Boost names a transform upgrading a cryptosystem.
+type Boost string
+
+// CatalanoFiore lets ciphertexts of an additively homomorphic algorithm be
+// multiplied once. Then, Encrypt returns ciphertexts supporting one
+// multiplication, and only integers are supported. It is supported for
+// Paillier, Damgard-Jurik, Bresson-Catalano-Pointcheval, Camenisch-Shoup,
+// EllipticCurve-Paillier, Joye-Libert, Castagnos-Laguillaumie, Naccache-Stern,
+// Benaloh and Damgard-Geisler-Kroigaard.
+const CatalanoFiore Boost = catalanofiore.Name
 
 // Sentinel errors, re-exported so that errors.Is works without importing phe.
 var (
@@ -142,7 +204,7 @@ var (
 	ErrInvalidCiphertext    = phe.ErrInvalidCiphertext
 	ErrKeyGeneration        = phe.ErrKeyGeneration
 	ErrDecryptionFailed     = phe.ErrDecryptionFailed
-	ErrFloatNotSupported    = joyelibert.ErrFloatNotSupported
+	ErrFloatNotSupported    = phe.ErrFloatNotSupported
 )
 
 // Algorithms lists every cryptosystem this library ships with.
@@ -165,13 +227,17 @@ type config struct {
 	maxTries       int
 	damgardJurikS  int
 	deterministic  bool
+	boost          Boost
 }
 
 // Option customises how a cryptosystem is built.
 type Option func(*config)
 
 // WithKeySize sets the key size in bits. Ignored when existing keys are
-// supplied.
+// supplied. For Regev, it is the lattice dimension. For
+// Brakerski-Vaikuntanathan, it is the ring degree. For Freeman-Boneh-Goh-Nissim,
+// it is the bit length of the field size. For Gentry-Halevi-Vaikuntanathan, it
+// is the lattice dimension in [2, 8].
 func WithKeySize(bits int) Option {
 	return func(c *config) { c.keySize = bits }
 }
@@ -193,8 +259,9 @@ func WithPrecision(digits int) Option {
 }
 
 // WithCurve selects the elliptic curve form and curve name. It only affects
-// EllipticCurve-ElGamal. An empty form defaults to weierstrass and an empty
-// curve to that form's standard curve.
+// EllipticCurve-ElGamal and Camenisch-Shoup, which uses it for verifiable
+// encryption. An empty form defaults to weierstrass and an empty curve to that
+// form's standard curve.
 func WithCurve(form, curve string) Option {
 	return func(c *config) {
 		c.form = form
@@ -203,7 +270,9 @@ func WithCurve(form, curve string) Option {
 }
 
 // WithPlaintextLimit sets an upper bound for plaintexts. It only affects
-// Benaloh and Sander-Young-Yung, which size their message space around it.
+// Benaloh, Sander-Young-Yung, Regev, Brakerski-Vaikuntanathan,
+// Freeman-Boneh-Goh-Nissim and Gentry-Halevi-Vaikuntanathan, which size their
+// message space around it.
 func WithPlaintextLimit(limit *big.Int) Option {
 	return func(c *config) { c.plaintextLimit = limit }
 }
@@ -211,7 +280,8 @@ func WithPlaintextLimit(limit *big.Int) Option {
 // WithMaxTries bounds the randomized search during key generation. It only
 // affects the schemes whose key generation can fail and retry: RSA, Benaloh,
 // Naccache-Stern, Goldwasser-Micali, Sander-Young-Yung, Boneh-Goh-Nissim,
-// Joye-Libert and Castagnos-Laguillaumie.
+// Joye-Libert, Castagnos-Laguillaumie, Damgard-Geisler-Kroigaard,
+// Bresson-Catalano-Pointcheval and Camenisch-Shoup.
 func WithMaxTries(tries int) Option {
 	return func(c *config) { c.maxTries = tries }
 }
@@ -227,6 +297,11 @@ func WithDamgardJurikS(s int) Option {
 // re-encrypt, so only reach for it deliberately.
 func WithDeterministic(deterministic bool) Option {
 	return func(c *config) { c.deterministic = deterministic }
+}
+
+// WithBoost upgrades the algorithm with a transform. See CatalanoFiore.
+func WithBoost(boost Boost) Option {
+	return func(c *config) { c.boost = boost }
 }
 
 func newConfig(opts []Option) *config {
@@ -267,6 +342,17 @@ func New(algorithm phe.Algorithm, opts ...Option) (*Cryptosystem, error) {
 	cs, err := build(algorithm, cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	// Catalano-Fiore transform wraps the built cryptosystem
+	switch cfg.boost {
+	case "":
+	case CatalanoFiore:
+		if cs, err = catalanofiore.New(cs); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("lightphe: unknown boost %q, options are: %s", cfg.boost, CatalanoFiore)
 	}
 
 	public, err := cs.PublicOnly()
@@ -373,6 +459,54 @@ func build(algorithm phe.Algorithm, cfg *config) (phe.Homomorphic, error) {
 		}
 		return ishaipaskin.Generate(cfg.keySize)
 
+	case phe.DamgardGeislerKroigaard:
+		if restoring {
+			return damgardgeislerkroigaard.FromJSON(cfg.keys)
+		}
+		return damgardgeislerkroigaard.Generate(cfg.keySize, cfg.maxTries)
+
+	case phe.BressonCatalanoPointcheval:
+		if restoring {
+			return bressoncatalanopointcheval.FromJSON(cfg.keys)
+		}
+		return bressoncatalanopointcheval.Generate(cfg.keySize, cfg.maxTries)
+
+	case phe.CamenischShoup:
+		if restoring {
+			return camenischshoup.FromJSON(cfg.keys, cfg.form, cfg.curve)
+		}
+		return camenischshoup.Generate(cfg.keySize, cfg.maxTries, cfg.form, cfg.curve)
+
+	case phe.EllipticCurvePaillier:
+		if restoring {
+			return ellipticcurvepaillier.FromJSON(cfg.keys)
+		}
+		return ellipticcurvepaillier.Generate(cfg.keySize)
+
+	case phe.Regev:
+		if restoring {
+			return regev.FromJSON(cfg.keys)
+		}
+		return regev.Generate(cfg.keySize, cfg.plaintextLimit)
+
+	case phe.BrakerskiVaikuntanathan:
+		if restoring {
+			return brakerskivaikuntanathan.FromJSON(cfg.keys)
+		}
+		return brakerskivaikuntanathan.Generate(cfg.keySize, cfg.plaintextLimit)
+
+	case phe.FreemanBonehGohNissim:
+		if restoring {
+			return freemanbonehgohnissim.FromJSON(cfg.keys)
+		}
+		return freemanbonehgohnissim.Generate(cfg.keySize, cfg.plaintextLimit)
+
+	case phe.GentryHaleviVaikuntanathan:
+		if restoring {
+			return gentryhalevivaikuntanathan.FromJSON(cfg.keys)
+		}
+		return gentryhalevivaikuntanathan.Generate(cfg.keySize, cfg.plaintextLimit)
+
 	default:
 		return nil, fmt.Errorf("lightphe: unimplemented algorithm %q", algorithm)
 	}
@@ -381,8 +515,17 @@ func build(algorithm phe.Algorithm, cfg *config) (phe.Homomorphic, error) {
 // Algorithm reports which cryptosystem this instance uses.
 func (c *Cryptosystem) Algorithm() phe.Algorithm { return c.algorithm }
 
-// Scheme exposes the underlying cryptosystem for advanced use.
+// Scheme exposes the underlying cryptosystem for advanced use. It is the
+// Catalano-Fiore transform wrapping the algorithm when it is boosted.
 func (c *Cryptosystem) Scheme() phe.Homomorphic { return c.cs }
+
+// unboosted returns the algorithm itself, without the transform wrapping it.
+func (c *Cryptosystem) unboosted() phe.Homomorphic {
+	if cf, ok := c.cs.(*catalanofiore.Cryptosystem); ok {
+		return cf.Inner()
+	}
+	return c.cs
+}
 
 // Precision reports how many decimal digits tensor encryption keeps.
 func (c *Cryptosystem) Precision() int { return c.precision }
@@ -422,6 +565,9 @@ func (c *Cryptosystem) EncryptInt(plaintext int64) (*encrypted.Ciphertext, error
 // it yields the scaled integer, so the caller has to interpret it in the same
 // fixed point terms. For vectors of floats, prefer EncryptTensor.
 func (c *Cryptosystem) EncryptFloat(plaintext float64) (*encrypted.Ciphertext, error) {
+	if err := phe.RejectsFloats(c.cs); err != nil {
+		return nil, err
+	}
 	if c.algorithm == phe.JoyeLibert && plaintext != math.Trunc(plaintext) {
 		return nil, joyelibert.ErrFloatNotSupported
 	}
@@ -439,6 +585,21 @@ func (c *Cryptosystem) Decrypt(ciphertext *encrypted.Ciphertext) (*big.Int, erro
 	}
 	if !c.cs.HasPrivateKey() {
 		return nil, phe.ErrMissingPrivateKey
+	}
+
+	// boosted and plain cryptosystems with the same keys decrypt each other's
+	// ciphertexts
+	_, boosted := c.cs.(*catalanofiore.Cryptosystem)
+	_, boostedCiphertext := ciphertext.Scheme().(*catalanofiore.Cryptosystem)
+	switch {
+	case boostedCiphertext && !boosted:
+		cf, err := catalanofiore.New(c.cs)
+		if err != nil {
+			return nil, err
+		}
+		return cf.Decrypt(ciphertext.Value)
+	case boosted && !boostedCiphertext:
+		return c.unboosted().Decrypt(ciphertext.Value)
 	}
 	return c.cs.Decrypt(ciphertext.Value)
 }
@@ -487,12 +648,286 @@ func (c *Cryptosystem) EvaluateDecisionTree(tree *DecisionTree, encryptedInput [
 }
 
 // ---------------------------------------------------------------------------
+// Private decision trees with numeric thresholds
+// ---------------------------------------------------------------------------
+
+func (c *Cryptosystem) numericTrees() (phe.NumericDecisionTreeEvaluator, error) {
+	if e, ok := c.unboosted().(phe.NumericDecisionTreeEvaluator); ok {
+		return e, nil
+	}
+	return nil, phe.Unsupportedf(c.algorithm, phe.OpNumericDecisionTree)
+}
+
+// EncryptDecisionTreeFeatures encrypts client's numeric features, each in
+// [0, 2^bitLength), to be evaluated in a decision tree owned by the server.
+// 1st step of private decision tree evaluation, runs on client side. Only
+// Damgard-Geisler-Kroigaard supports this.
+func (c *Cryptosystem) EncryptDecisionTreeFeatures(features []int64, bitLength int) ([][]*big.Int, error) {
+	e, err := c.numericTrees()
+	if err != nil {
+		return nil, err
+	}
+	return e.EncryptDecisionTreeFeatures(features, bitLength)
+}
+
+// EvaluateDecisionTreeComparisons compares encrypted features with thresholds
+// of all decision nodes. 2nd step of private decision tree evaluation, runs on
+// server side. The encrypted comparisons are sent to the client, and the state
+// must be kept secret on server side for the 4th step. Only
+// Damgard-Geisler-Kroigaard supports this.
+func (c *Cryptosystem) EvaluateDecisionTreeComparisons(tree *NumericTree, encryptedFeatures [][]*big.Int) (
+	[][]*big.Int, *DecisionTreeState, error) {
+	e, err := c.numericTrees()
+	if err != nil {
+		return nil, nil, err
+	}
+	return e.EvaluateDecisionTreeComparisons(tree, encryptedFeatures)
+}
+
+// AnswerDecisionTreeComparisons answers server's comparisons in encrypted
+// form. Comparisons are randomly flipped by the server, so client does not
+// learn the path in the tree. 3rd step of private decision tree evaluation,
+// runs on client side. Only Damgard-Geisler-Kroigaard supports this.
+func (c *Cryptosystem) AnswerDecisionTreeComparisons(encryptedComparisons [][]*big.Int) ([]*big.Int, error) {
+	e, err := c.numericTrees()
+	if err != nil {
+		return nil, err
+	}
+	return e.AnswerDecisionTreeComparisons(encryptedComparisons)
+}
+
+// EvaluateDecisionTreeLeaves finds the reached leaf in encrypted form. 4th
+// step of private decision tree evaluation, runs on server side. Only
+// Damgard-Geisler-Kroigaard supports this.
+func (c *Cryptosystem) EvaluateDecisionTreeLeaves(state *DecisionTreeState, encryptedAnswers []*big.Int) ([]EncryptedLeaf, error) {
+	e, err := c.numericTrees()
+	if err != nil {
+		return nil, err
+	}
+	return e.EvaluateDecisionTreeLeaves(state, encryptedAnswers)
+}
+
+// DecryptDecisionTreeOutput restores the label of the reached leaf. Client
+// learns only this label. Last step of private decision tree evaluation, runs
+// on client side. Only Damgard-Geisler-Kroigaard supports this.
+func (c *Cryptosystem) DecryptDecisionTreeOutput(encryptedLeaves []EncryptedLeaf) (*big.Int, error) {
+	e, err := c.numericTrees()
+	if err != nil {
+		return nil, err
+	}
+	return e.DecryptDecisionTreeOutput(encryptedLeaves)
+}
+
+// ---------------------------------------------------------------------------
+// Secure comparison
+// ---------------------------------------------------------------------------
+
+func (c *Cryptosystem) comparer() (phe.SecureComparer, error) {
+	if e, ok := c.unboosted().(phe.SecureComparer); ok {
+		return e, nil
+	}
+	return nil, phe.Unsupportedf(c.algorithm, phe.OpSecureComparison)
+}
+
+// EncryptComparisonInput encrypts bits of client's value x in
+// [0, 2^bitLength) to compare it with server's value y. 1st step of secure
+// comparison, runs on client side. Only Damgard-Geisler-Kroigaard supports
+// this.
+func (c *Cryptosystem) EncryptComparisonInput(value int64, bitLength int) ([]*big.Int, error) {
+	e, err := c.comparer()
+	if err != nil {
+		return nil, err
+	}
+	return e.EncryptComparisonInput(value, bitLength)
+}
+
+// EvaluateComparison compares client's encrypted value x with server's value
+// y. 2nd step of secure comparison, runs on server side. Private key is not
+// required and server learns nothing about x. Only Damgard-Geisler-Kroigaard
+// supports this.
+func (c *Cryptosystem) EvaluateComparison(encryptedInput []*big.Int, value int64) ([]*big.Int, error) {
+	e, err := c.comparer()
+	if err != nil {
+		return nil, err
+	}
+	return e.EvaluateComparison(encryptedInput, value)
+}
+
+// DecryptComparison restores the result of secure comparison, true if x <= y.
+// 3rd step of secure comparison, runs on client side. Client learns only
+// whether x <= y, but not y. Only Damgard-Geisler-Kroigaard supports this.
+func (c *Cryptosystem) DecryptComparison(encryptedResult []*big.Int) (bool, error) {
+	e, err := c.comparer()
+	if err != nil {
+		return false, err
+	}
+	return e.DecryptComparison(encryptedResult)
+}
+
+// ---------------------------------------------------------------------------
+// Encrypted argmax
+// ---------------------------------------------------------------------------
+
+func (c *Cryptosystem) argmax() (phe.ArgmaxEvaluator, error) {
+	if e, ok := c.unboosted().(phe.ArgmaxEvaluator); ok {
+		return e, nil
+	}
+	return nil, phe.Unsupportedf(c.algorithm, phe.OpArgmax)
+}
+
+// EvaluateArgmax finds the index of the maximum of encrypted values in
+// [0, 2^bitLength) without decrypting them. It runs on server side and talks
+// to the client (private key owner) through the client callback, which can be
+// the client's AnswerArgmax locally, or a network call otherwise. Client
+// learns only the index, and server learns nothing. Index of the first maximum
+// is returned on ties. Only Damgard-Geisler-Kroigaard supports this.
+func (c *Cryptosystem) EvaluateArgmax(encryptedValues []*encrypted.Ciphertext, bitLength int, client ArgmaxClient) (
+	*encrypted.Ciphertext, error) {
+	e, err := c.argmax()
+	if err != nil {
+		return nil, err
+	}
+	values := make([]*big.Int, len(encryptedValues))
+	for i, ciphertext := range encryptedValues {
+		if ciphertext == nil {
+			return nil, phe.InvalidCiphertextf("lightphe: nil ciphertext")
+		}
+		if values[i], err = phe.AsInt(ciphertext.Value); err != nil {
+			return nil, err
+		}
+	}
+	output, err := e.EvaluateArgmax(values, bitLength, client)
+	if err != nil {
+		return nil, err
+	}
+	return encrypted.NewCiphertext(c.public, phe.Int{V: output}), nil
+}
+
+// AnswerArgmax answers a message of the server during encrypted argmax. It
+// runs on client side. Every value decrypted here is masked with a uniformly
+// random value. Only Damgard-Geisler-Kroigaard supports this.
+func (c *Cryptosystem) AnswerArgmax(message ArgmaxMessage) ([]*big.Int, error) {
+	e, err := c.argmax()
+	if err != nil {
+		return nil, err
+	}
+	return e.AnswerArgmax(message)
+}
+
+// ---------------------------------------------------------------------------
+// Master key decryption
+// ---------------------------------------------------------------------------
+
+func (c *Cryptosystem) masterKey() (phe.MasterKeyDecrypter, error) {
+	if e, ok := c.unboosted().(phe.MasterKeyDecrypter); ok {
+		return e, nil
+	}
+	return nil, phe.Unsupportedf(c.algorithm, phe.OpMasterKey)
+}
+
+// DecryptWithMasterKey decrypts a ciphertext with the master key instead of
+// the private key of its owner. The master key can decrypt ciphertexts of all
+// users sharing it. Only Bresson-Catalano-Pointcheval supports this.
+func (c *Cryptosystem) DecryptWithMasterKey(ciphertext *encrypted.Ciphertext) (*big.Int, error) {
+	if ciphertext == nil {
+		return nil, phe.InvalidCiphertextf("lightphe: nil ciphertext")
+	}
+	e, err := c.masterKey()
+	if err != nil {
+		return nil, err
+	}
+	return e.DecryptWithMasterKey(ciphertext.Value, ciphertext.Scheme())
+}
+
+// DecryptTensorWithMasterKey decrypts an encrypted tensor of any user with the
+// master key. Only Bresson-Catalano-Pointcheval supports this.
+func (c *Cryptosystem) DecryptTensorWithMasterKey(tensor *encrypted.Tensor) ([]float64, error) {
+	if tensor == nil {
+		return nil, phe.InvalidCiphertextf("lightphe: nil tensor")
+	}
+	e, err := c.masterKey()
+	if err != nil {
+		return nil, err
+	}
+	owner := tensor.Scheme()
+	return decryptFractions(tensor, func(v phe.Value) (*big.Int, error) {
+		return e.DecryptWithMasterKey(v, owner)
+	})
+}
+
+// GenerateUserKeys generates JSON key material of a new user of a master key.
+// Public key of the authority holding the master key is enough to generate it.
+// The master key can decrypt ciphertexts encrypted for the new user, but the
+// new user cannot decrypt ciphertexts of others. Build the user's cryptosystem
+// with WithKeys. Only Bresson-Catalano-Pointcheval supports this.
+func (c *Cryptosystem) GenerateUserKeys() ([]byte, error) {
+	e, err := c.masterKey()
+	if err != nil {
+		return nil, err
+	}
+	return e.GenerateUserKeys()
+}
+
+// ---------------------------------------------------------------------------
+// Verifiable encryption
+// ---------------------------------------------------------------------------
+
+func (c *Cryptosystem) verifiable() (phe.VerifiableEncrypter, error) {
+	if e, ok := c.unboosted().(phe.VerifiableEncrypter); ok {
+		return e, nil
+	}
+	return nil, phe.Unsupportedf(c.algorithm, phe.OpVerifiable)
+}
+
+// EncryptVerifiably encrypts the discrete logarithm of an elliptic curve
+// point, e.g. a private key, for the owner of this cryptosystem and proves
+// that the ciphertext contains it. Label is public data bound to the
+// ciphertext, e.g. decryption conditions, and the ciphertext cannot be
+// decrypted with a different label. It runs on prover side and needs the
+// public key of the trusted third party only. Only Camenisch-Shoup supports
+// this.
+func (c *Cryptosystem) EncryptVerifiably(secret *big.Int, label string) (*VerifiableCiphertext, error) {
+	e, err := c.verifiable()
+	if err != nil {
+		return nil, err
+	}
+	return e.EncryptVerifiably(secret, label)
+}
+
+// VerifyEncryption verifies that a verifiable ciphertext contains the discrete
+// logarithm of a public point bound to label, without decrypting it. It runs
+// on verifier side and needs the public key of the trusted third party only.
+// Only Camenisch-Shoup supports this.
+func (c *Cryptosystem) VerifyEncryption(ciphertext *VerifiableCiphertext, publicPoint ecc.Point, label string) (bool, error) {
+	e, err := c.verifiable()
+	if err != nil {
+		return false, err
+	}
+	return e.VerifyEncryption(ciphertext, publicPoint, label)
+}
+
+// DecryptVerifiableCiphertext restores the secret from a verifiable
+// ciphertext with the label used in encryption. It runs on the side of the
+// private key owner, e.g. a trusted third party, and does not check the proof,
+// as VerifyEncryption does that. Only Camenisch-Shoup supports this.
+func (c *Cryptosystem) DecryptVerifiableCiphertext(ciphertext *VerifiableCiphertext, label string) (*big.Int, error) {
+	e, err := c.verifiable()
+	if err != nil {
+		return nil, err
+	}
+	return e.DecryptVerifiableCiphertext(ciphertext, label)
+}
+
+// ---------------------------------------------------------------------------
 // Tensor encryption
 // ---------------------------------------------------------------------------
 
 // EncryptTensor encrypts a vector of real numbers. Elements are encrypted
 // concurrently across the available cores.
 func (c *Cryptosystem) EncryptTensor(tensor []float64) (*encrypted.Tensor, error) {
+	if err := phe.RejectsFloats(c.cs); err != nil {
+		return nil, err
+	}
 	if len(tensor) == 0 {
 		return nil, fmt.Errorf("lightphe: cannot encrypt an empty tensor")
 	}
@@ -575,16 +1010,21 @@ func (c *Cryptosystem) DecryptTensor(tensor *encrypted.Tensor) ([]float64, error
 	if !c.cs.HasPrivateKey() {
 		return nil, phe.ErrMissingPrivateKey
 	}
+	return decryptFractions(tensor, c.cs.Decrypt)
+}
 
+// decryptFractions recovers the real numbers behind an encrypted tensor with
+// the given decryption function.
+func decryptFractions(tensor *encrypted.Tensor, decrypt func(phe.Value) (*big.Int, error)) ([]float64, error) {
 	out := make([]float64, len(tensor.Fractions))
 	err := parallelDo(len(tensor.Fractions), func(i int) error {
 		fraction := tensor.Fractions[i]
 
-		absDividend, err := c.cs.Decrypt(fraction.AbsDividend)
+		absDividend, err := decrypt(fraction.AbsDividend)
 		if err != nil {
 			return err
 		}
-		divisor, err := c.cs.Decrypt(fraction.Divisor)
+		divisor, err := decrypt(fraction.Divisor)
 		if err != nil {
 			return err
 		}

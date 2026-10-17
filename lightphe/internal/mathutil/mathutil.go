@@ -325,3 +325,77 @@ func SqrtMod(a, p *big.Int) (*big.Int, error) {
 	}
 	return r, nil
 }
+
+// smallPrimes sieves safe prime candidates before the expensive primality
+// tests.
+var smallPrimes = func() []int64 {
+	var primes []int64
+	for c := int64(3); c < 2000; c += 2 {
+		if big.NewInt(c).ProbablyPrime(0) {
+			primes = append(primes, c)
+		}
+	}
+	return primes
+}()
+
+// RandSafePrime returns a random safe prime p = 2p' + 1 of the given bit
+// length, where p' is also prime.
+func RandSafePrime(bits, maxTries int) (*big.Int, error) {
+	if bits < 4 {
+		return nil, fmt.Errorf("mathutil: safe prime size %d is too small", bits)
+	}
+	if maxTries <= 0 {
+		maxTries = 10000
+	}
+	pPrime := new(big.Int)
+	p := new(big.Int)
+	rem := new(big.Int)
+	for i := 0; i < maxTries*100; i++ {
+		candidate, err := RandBits(bits - 1)
+		if err != nil {
+			return nil, err
+		}
+		pPrime.Set(candidate)
+		pPrime.SetBit(pPrime, bits-2, 1)
+		pPrime.SetBit(pPrime, 0, 1)
+		p.Lsh(pPrime, 1).Add(p, one)
+
+		divisible := false
+		for _, s := range smallPrimes {
+			sb := big.NewInt(s)
+			if sb.Cmp(pPrime) >= 0 {
+				break
+			}
+			if rem.Mod(pPrime, sb).Sign() == 0 || rem.Mod(p, sb).Sign() == 0 {
+				divisible = true
+				break
+			}
+		}
+		if divisible {
+			continue
+		}
+		if pPrime.ProbablyPrime(32) && p.ProbablyPrime(32) {
+			return new(big.Int).Set(p), nil
+		}
+	}
+	return nil, fmt.Errorf("mathutil: no %d-bit safe prime found: %w", bits, ErrExhausted)
+}
+
+// RandDistinctSafePrimes returns two distinct safe primes of the given bit
+// length.
+func RandDistinctSafePrimes(bits, maxTries int) (*big.Int, *big.Int, error) {
+	p, err := RandSafePrime(bits, maxTries)
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := 0; i < 1000; i++ {
+		q, err := RandSafePrime(bits, maxTries)
+		if err != nil {
+			return nil, nil, err
+		}
+		if p.Cmp(q) != 0 {
+			return p, q, nil
+		}
+	}
+	return nil, nil, fmt.Errorf("mathutil: could not draw two distinct %d-bit safe primes: %w", bits, ErrExhausted)
+}
