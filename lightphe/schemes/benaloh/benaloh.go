@@ -202,8 +202,14 @@ func findGenerator(n, phi, r *big.Int, maxTries int) (y, x *big.Int, err error) 
 			continue
 		}
 
-		// y must not be a p-th power for any prime p dividing r, otherwise
-		// distinct messages collide during decryption.
+		// x = y^(phi/r) must have order exactly r, so y must not be a p-th
+		// power for any prime p dividing r, otherwise distinct messages collide
+		// during decryption. Benaloh's original key generation only checks
+		// y^(phi/r) != 1 mod n, which is not enough for a composite r. Since r
+		// is always prime here, both conditions are the same, but this check
+		// keeps keys correct even if r becomes composite in the future.
+		// Ref: Fousse, L., Lafourcade, P., Alnuaimi, M. (2011). Benaloh's Dense
+		// Probabilistic Encryption Revisited. AFRICACRYPT 2011.
 		guaranteed := true
 		for _, f := range factors {
 			e := new(big.Int).Div(phi, f)
@@ -325,7 +331,7 @@ func (c *Cryptosystem) Decrypt(ciphertext phe.Value) (*big.Int, error) {
 			return m, nil
 		}
 		m.Add(m, one)
-		if m.Cmp(c.r) > 0 {
+		if m.Cmp(c.r) >= 0 {
 			return nil, fmt.Errorf("benaloh: cannot restore a message in [0, %s): %w", c.r, phe.ErrDecryptionFailed)
 		}
 		acc.Mul(acc, c.x).Mod(acc, c.n)

@@ -31,6 +31,10 @@ var (
 
 	// ErrDecryptionFailed reports that a plaintext could not be recovered.
 	ErrDecryptionFailed = errors.New("lightphe: decryption failed")
+
+	// ErrFloatNotSupported reports a float plaintext, constant or tensor given
+	// to a cryptosystem that only works on integers.
+	ErrFloatNotSupported = errors.New("lightphe: float values are not supported")
 )
 
 // Operation names used when reporting an unsupported homomorphic operation.
@@ -42,6 +46,13 @@ const (
 	OpScalarMultiplcation = "multiplication by a known constant"
 	OpReencryption        = "re-encryption"
 	OpDecisionTree        = "evaluating decision trees"
+	OpDecisionTreeInput   = "evaluating decision trees with bits and depth"
+	OpNumericDecisionTree = "private decision tree evaluation with numeric features"
+	OpSecureComparison    = "secure comparison"
+	OpArgmax              = "encrypted argmax"
+	OpMasterKey           = "master key decryption"
+	OpUserKeys            = "generating user keys sharing a master key"
+	OpVerifiable          = "verifiable encryption"
 )
 
 // Unsupportedf builds an ErrUnsupportedOperation for the given algorithm and
@@ -58,4 +69,32 @@ func InvalidKeysf(format string, args ...interface{}) error {
 // InvalidCiphertextf builds an ErrInvalidCiphertext with additional context.
 func InvalidCiphertextf(format string, args ...interface{}) error {
 	return fmt.Errorf("lightphe: "+format+": %w", append(args, ErrInvalidCiphertext)...)
+}
+
+// floatError is an error whose message names the cryptosystem and the reason,
+// while errors.Is still matches ErrFloatNotSupported.
+type floatError struct{ msg string }
+
+func (e *floatError) Error() string { return e.msg }
+
+func (e *floatError) Is(target error) bool { return target == ErrFloatNotSupported }
+
+// FloatNotSupported builds an error matching ErrFloatNotSupported with the
+// given message.
+func FloatNotSupported(msg string) error { return &floatError{msg: msg} }
+
+// FloatRejecter is implemented by cryptosystems that support integers only.
+// Encrypting floats or tensors, and multiplying with float constants, are
+// rejected with the returned error for them.
+type FloatRejecter interface {
+	FloatsUnsupported() error
+}
+
+// RejectsFloats returns the error of a cryptosystem supporting integers only,
+// or nil if it supports floats.
+func RejectsFloats(cs Homomorphic) error {
+	if r, ok := cs.(FloatRejecter); ok {
+		return r.FloatsUnsupported()
+	}
+	return nil
 }

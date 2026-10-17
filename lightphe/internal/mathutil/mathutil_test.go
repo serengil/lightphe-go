@@ -170,3 +170,19 @@ func TestJacobi(t *testing.T) {
 		t.Fatalf("Jacobi(2, 5) = %d, want -1", got)
 	}
 }
+
+func TestRandSafePrime(t *testing.T) {
+	for _, bits := range []int{16, 64, 128} {
+		p, err := RandSafePrime(bits, 10000)
+		if err != nil {
+			t.Fatalf("generating a %d-bit safe prime: %v", bits, err)
+		}
+		if p.BitLen() != bits {
+			t.Fatalf("safe prime has %d bits, want %d", p.BitLen(), bits)
+		}
+		half := new(big.Int).Rsh(p, 1)
+		if !IsPrime(p) || !IsPrime(half) {
+			t.Fatalf("%s is not a safe prime", p)
+		}
+	}
+}

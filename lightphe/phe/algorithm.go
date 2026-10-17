@@ -22,6 +22,15 @@ const (
 	JoyeLibert            Algorithm = "Joye-Libert"
 	CastagnosLaguillaumie Algorithm = "Castagnos-Laguillaumie"
 	IshaiPaskin           Algorithm = "Ishai-Paskin"
+
+	DamgardGeislerKroigaard    Algorithm = "Damgard-Geisler-Kroigaard"
+	BressonCatalanoPointcheval Algorithm = "Bresson-Catalano-Pointcheval"
+	CamenischShoup             Algorithm = "Camenisch-Shoup"
+	EllipticCurvePaillier      Algorithm = "EllipticCurve-Paillier"
+	Regev                      Algorithm = "Regev"
+	BrakerskiVaikuntanathan    Algorithm = "Brakerski-Vaikuntanathan"
+	FreemanBonehGohNissim      Algorithm = "Freeman-Boneh-Goh-Nissim"
+	GentryHaleviVaikuntanathan Algorithm = "Gentry-Halevi-Vaikuntanathan"
 )
 
 // String implements fmt.Stringer.
@@ -45,5 +54,13 @@ func Algorithms() []Algorithm {
 		JoyeLibert,
 		CastagnosLaguillaumie,
 		IshaiPaskin,
+		DamgardGeislerKroigaard,
+		BressonCatalanoPointcheval,
+		CamenischShoup,
+		EllipticCurvePaillier,
+		Regev,
+		BrakerskiVaikuntanathan,
+		FreemanBonehGohNissim,
+		GentryHaleviVaikuntanathan,
 	}
 }

@@ -86,6 +86,9 @@ func (c *Ciphertext) MultiplyByInt(constant int64) (*Ciphertext, error) {
 // MultiplyByFloat evaluates E(m * k) for a known non-negative float k, which is
 // mapped onto the message space as a modular fraction first.
 func (c *Ciphertext) MultiplyByFloat(constant float64) (*Ciphertext, error) {
+	if err := phe.RejectsFloats(c.cs); err != nil {
+		return nil, err
+	}
 	if c.cs.Algorithm() == phe.JoyeLibert && constant != math.Trunc(constant) {
 		return nil, joyelibert.ErrFloatNotSupported
 	}
@@ -144,6 +147,9 @@ func (c *Ciphertext) compatible(other *Ciphertext) error {
 	if c.cs.Algorithm() != other.cs.Algorithm() {
 		return phe.InvalidCiphertextf("encrypted: cannot combine a %s ciphertext with a %s one",
 			c.cs.Algorithm(), other.cs.Algorithm())
+	}
+	if c.cs.PlaintextModulo().Cmp(other.cs.PlaintextModulo()) != 0 {
+		return phe.InvalidCiphertextf("encrypted: ciphertexts belong to different cryptosystems")
 	}
 	return nil
 }
