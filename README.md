@@ -29,7 +29,8 @@ and somewhat homomorphic encryption schemes such as
 [`Boneh-Goh-Nissim`](https://sefiks.com/2026/04/02/a-step-by-step-somewhat-homomorphic-encryption-example-with-boneh-goh-nissim-in-python/),
 `Joye-Libert`, `Castagnos-Laguillaumie`, `Ishai-Paskin`, `Damgard-Geisler-Kroigaard`,
 `Bresson-Catalano-Pointcheval`, `Camenisch-Shoup`, `Elliptic Curve Paillier`, `Regev`,
-`Brakerski-Vaikuntanathan`, `Freeman-Boneh-Goh-Nissim`, `Gentry-Halevi-Vaikuntanathan`.
+`Brakerski-Vaikuntanathan`, `Freeman-Boneh-Goh-Nissim`, `Gentry-Halevi-Vaikuntanathan`. 
+It also supports [`Catalano-Fiore`](#adding-multiplication-support-to-additive-algorithms) transform to add one multiplication to additively homomorphic ones.
 
 It is a pure Go port of [LightPHE](https://github.com/serengil/LightPHE), with the elliptic curve
 arithmetic of [LightECC](https://github.com/serengil/LightECC) folded in.
