@@ -71,11 +71,14 @@ var unsupportedReasons = map[phe.Algorithm]string{
 		"random values the transform encrypts",
 	phe.OkamotoUchiyama:            "its plaintext modulus p is secret, so the encryptor cannot compute m - b mod p",
 	phe.Regev:                      "multiplying with uniformly random constants exceeds its noise budget",
+	phe.LyubashevskyPeikertRegev:   "multiplying with uniformly random constants exceeds its noise budget",
+	phe.MLKEM:                      "it is homomorphic with respect to xor only, without addition",
 	phe.GoldwasserMicali:           "it encrypts integers bit by bit and supports xor only, without multiplication with a constant",
 	phe.BonehGohNissim:             "it already supports one multiplication natively",
 	phe.BrakerskiVaikuntanathan:    "it already supports one multiplication natively",
 	phe.FreemanBonehGohNissim:      "it already supports one multiplication natively",
 	phe.GentryHaleviVaikuntanathan: "it already supports one multiplication natively",
+	phe.GentrySahaiWaters:          "it already supports multiplications of bits natively",
 }
 
 // ErrFloatNotSupported reports a float plaintext, constant or tensor.
@@ -368,6 +371,13 @@ func multipliedValue(alpha phe.Value, pairs [][2]phe.Value) phe.Value {
 		items[i] = phe.NewTuple(pair[0], pair[1])
 	}
 	return phe.NewTuple(phe.Int{V: big.NewInt(tagMultiplied)}, alpha, phe.Tuple{Items: items})
+}
+
+// IsFresh reports whether a value is a ciphertext of the transform that can
+// be multiplied, i.e. it is not the result of a multiplication.
+func IsFresh(v phe.Value) bool {
+	p, err := parse(v)
+	return err == nil && !p.multiplied
 }
 
 func parse(v phe.Value) (parsed, error) {
