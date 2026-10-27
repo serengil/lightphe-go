@@ -21,8 +21,13 @@ import (
 )
 
 // PublicKey is the elliptic curve ElGamal public key: the point Qa = ka*G.
+// Threshold parameters are set after splitting the private key into shares.
 type PublicKey struct {
 	Qa *phe.Point `json:"Qa"`
+
+	Threshold        int          `json:"threshold,omitempty"`
+	Parties          int          `json:"parties,omitempty"`
+	VerificationKeys []*phe.Point `json:"verification_keys,omitempty"`
 }
 
 // PrivateKey is the secret scalar ka.
@@ -33,11 +38,14 @@ type PrivateKey struct {
 // Keys bundles the key pair together with the curve the keys live on. Form and
 // Curve are carried alongside the key material so that an exported key file is
 // self-describing.
+//
+// ThresholdKey is the share of a shareholder in threshold decryption.
 type Keys struct {
-	PublicKey  *PublicKey  `json:"public_key,omitempty"`
-	PrivateKey *PrivateKey `json:"private_key,omitempty"`
-	Form       string      `json:"form,omitempty"`
-	Curve      string      `json:"curve,omitempty"`
+	PublicKey    *PublicKey        `json:"public_key,omitempty"`
+	PrivateKey   *PrivateKey       `json:"private_key,omitempty"`
+	ThresholdKey *phe.ThresholdKey `json:"threshold_key,omitempty"`
+	Form         string            `json:"form,omitempty"`
+	Curve        string            `json:"curve,omitempty"`
 }
 
 // Validate reports missing or malformed key material.
@@ -166,6 +174,7 @@ func (c *Cryptosystem) ExportKeys(includePrivate bool) ([]byte, error) {
 	keys := Keys{PublicKey: c.keys.PublicKey, Form: c.keys.Form, Curve: c.keys.Curve}
 	if includePrivate {
 		keys.PrivateKey = c.keys.PrivateKey
+		keys.ThresholdKey = c.keys.ThresholdKey
 	}
 	return json.Marshal(keys)
 }

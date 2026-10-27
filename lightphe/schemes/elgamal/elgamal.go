@@ -21,11 +21,19 @@ import (
 // reference implementation the prime modulus takes half of it.
 const DefaultKeySize = 1024
 
-// PublicKey is the ElGamal public key.
+// PublicKey is the ElGamal public key. Q is the prime order of g, which is
+// set for keys generated with a prime order, and which threshold decryption
+// and zero-knowledge proofs require. Threshold parameters are set after
+// splitting the private key into shares.
 type PublicKey struct {
 	P *big.Int `json:"p"`
 	G *big.Int `json:"g"`
 	Y *big.Int `json:"y"`
+	Q *big.Int `json:"q,omitempty"`
+
+	Threshold        int        `json:"threshold,omitempty"`
+	Parties          int        `json:"parties,omitempty"`
+	VerificationKeys []*big.Int `json:"verification_keys,omitempty"`
 }
 
 // PrivateKey is the ElGamal private exponent.
@@ -34,9 +42,11 @@ type PrivateKey struct {
 }
 
 // Keys bundles the key pair. PrivateKey is nil for encryption-only setups.
+// ThresholdKey is the share of a shareholder in threshold decryption.
 type Keys struct {
-	PublicKey  *PublicKey  `json:"public_key,omitempty"`
-	PrivateKey *PrivateKey `json:"private_key,omitempty"`
+	PublicKey    *PublicKey        `json:"public_key,omitempty"`
+	PrivateKey   *PrivateKey       `json:"private_key,omitempty"`
+	ThresholdKey *phe.ThresholdKey `json:"threshold_key,omitempty"`
 }
 
 // Validate reports missing or malformed key material.
@@ -167,6 +177,7 @@ func (c *Cryptosystem) ExportKeys(includePrivate bool) ([]byte, error) {
 	keys := Keys{PublicKey: c.keys.PublicKey}
 	if includePrivate {
 		keys.PrivateKey = c.keys.PrivateKey
+		keys.ThresholdKey = c.keys.ThresholdKey
 	}
 	return json.Marshal(keys)
 }
@@ -218,7 +229,12 @@ func (c *Cryptosystem) Decrypt(ciphertext phe.Value) (*big.Int, error) {
 	}
 	mPrime := new(big.Int).Mul(c2, inv)
 	mPrime.Mod(mPrime, c.p)
+	return c.restorePlaintext(mPrime)
+}
 
+// restorePlaintext restores the plaintext from m' = c2 / c1^x, which is m for
+// ElGamal and g^m for exponential ElGamal.
+func (c *Cryptosystem) restorePlaintext(mPrime *big.Int) (*big.Int, error) {
 	if !c.exponential {
 		return mPrime, nil
 	}
