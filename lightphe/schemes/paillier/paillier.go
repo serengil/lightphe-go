@@ -18,9 +18,15 @@ import (
 const DefaultKeySize = 1024
 
 // PublicKey is the Paillier public key: the modulus n and the generator g.
+// Threshold parameters are set after splitting the private key into shares.
 type PublicKey struct {
 	G *big.Int `json:"g"`
 	N *big.Int `json:"n"`
+
+	Threshold        int        `json:"threshold,omitempty"`
+	Parties          int        `json:"parties,omitempty"`
+	VerificationBase *big.Int   `json:"verification_base,omitempty"`
+	VerificationKeys []*big.Int `json:"verification_keys,omitempty"`
 }
 
 // PrivateKey is the Paillier private key, Euler's totient of n.
@@ -29,9 +35,11 @@ type PrivateKey struct {
 }
 
 // Keys bundles the key pair. PrivateKey is nil for encryption-only setups.
+// ThresholdKey is the share of a shareholder in threshold decryption.
 type Keys struct {
-	PublicKey  *PublicKey  `json:"public_key,omitempty"`
-	PrivateKey *PrivateKey `json:"private_key,omitempty"`
+	PublicKey    *PublicKey        `json:"public_key,omitempty"`
+	PrivateKey   *PrivateKey       `json:"private_key,omitempty"`
+	ThresholdKey *phe.ThresholdKey `json:"threshold_key,omitempty"`
 }
 
 // Validate reports missing or malformed key material.
@@ -152,6 +160,7 @@ func (c *Cryptosystem) ExportKeys(includePrivate bool) ([]byte, error) {
 	keys := Keys{PublicKey: c.keys.PublicKey}
 	if includePrivate {
 		keys.PrivateKey = c.keys.PrivateKey
+		keys.ThresholdKey = c.keys.ThresholdKey
 	}
 	return json.Marshal(keys)
 }
