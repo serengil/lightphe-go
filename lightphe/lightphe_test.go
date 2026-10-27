@@ -725,6 +725,10 @@ func restoreCases() []restoreCase {
 			multiplication, func(m *big.Int) *big.Int {
 				return new(big.Int).Mod(big.NewInt(restoreM1*restoreM2), m)
 			}},
+		{phe.LyubashevskyPeikertRegev, []lightphe.Option{lightphe.WithKeySize(64)}, addition, sum},
+		{phe.MLKEM, []lightphe.Option{lightphe.WithKeySize(512)}, exclusiveOr, func(*big.Int) *big.Int {
+			return big.NewInt(restoreM1 ^ restoreM2)
+		}},
 	}
 }
 
@@ -897,6 +901,9 @@ func keyFieldCases() []keyFieldCase {
 		{phe.BrakerskiVaikuntanathan, []lightphe.Option{lightphe.WithKeySize(64)}, "seed", "s"},
 		{phe.FreemanBonehGohNissim, []lightphe.Option{lightphe.WithKeySize(64)}, "h1", "v"},
 		{phe.GentryHaleviVaikuntanathan, []lightphe.Option{lightphe.WithKeySize(2)}, "A", "T"},
+		{phe.LyubashevskyPeikertRegev, []lightphe.Option{lightphe.WithKeySize(64)}, "seed", "s"},
+		{phe.MLKEM, []lightphe.Option{lightphe.WithKeySize(512)}, "t", "s"},
+		{phe.GentrySahaiWaters, []lightphe.Option{lightphe.WithKeySize(16)}, "seed", "s"},
 	}
 }
 

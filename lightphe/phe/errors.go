@@ -53,6 +53,14 @@ const (
 	OpMasterKey           = "master key decryption"
 	OpUserKeys            = "generating user keys sharing a master key"
 	OpVerifiable          = "verifiable encryption"
+	OpThreshold           = "threshold decryption"
+	OpVerifyPartial       = "verifying partial decryptions"
+	OpDecryptionProof     = "proofs of correct decryption"
+	OpMembershipProof     = "proving that a ciphertext encrypts one of given values"
+	OpKnowledgeProof      = "proofs of knowledge of plaintext"
+	OpAggregation         = "secure aggregation"
+	OpNearestNeighbors    = "encrypted nearest neighbor search"
+	OpClassification      = "encrypted classification"
 )
 
 // Unsupportedf builds an ErrUnsupportedOperation for the given algorithm and

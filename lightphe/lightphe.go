@@ -52,9 +52,12 @@ import (
 	"github.com/serengil/lightphe-go/lightphe/schemes/ellipticcurvepaillier"
 	"github.com/serengil/lightphe-go/lightphe/schemes/freemanbonehgohnissim"
 	"github.com/serengil/lightphe-go/lightphe/schemes/gentryhalevivaikuntanathan"
+	"github.com/serengil/lightphe-go/lightphe/schemes/gentrysahaiwaters"
 	"github.com/serengil/lightphe-go/lightphe/schemes/goldwassermicali"
 	"github.com/serengil/lightphe-go/lightphe/schemes/ishaipaskin"
 	"github.com/serengil/lightphe-go/lightphe/schemes/joyelibert"
+	"github.com/serengil/lightphe-go/lightphe/schemes/lyubashevskypeikertregev"
+	"github.com/serengil/lightphe-go/lightphe/schemes/mlkem"
 	"github.com/serengil/lightphe-go/lightphe/schemes/naccachestern"
 	"github.com/serengil/lightphe-go/lightphe/schemes/okamotouchiyama"
 	"github.com/serengil/lightphe-go/lightphe/schemes/paillier"
@@ -122,6 +125,19 @@ type (
 
 	// VerifiableCiphertext is the output of verifiable encryption.
 	VerifiableCiphertext = phe.VerifiableCiphertext
+
+	// PartialDecryption is the output of a shareholder in threshold
+	// decryption.
+	PartialDecryption = phe.PartialDecryption
+
+	// ZKProof is a non-interactive zero-knowledge proof.
+	ZKProof = phe.ZKProof
+
+	// RangeProof proves that a ciphertext encrypts a value in a range.
+	RangeProof = phe.RangeProof
+
+	// OneHotProof proves that encrypted slots are a one-hot vector.
+	OneHotProof = phe.OneHotProof
 )
 
 // Leaf builds a decision tree leaf that outputs value.
@@ -182,6 +198,9 @@ const (
 	BrakerskiVaikuntanathan    = phe.BrakerskiVaikuntanathan
 	FreemanBonehGohNissim      = phe.FreemanBonehGohNissim
 	GentryHaleviVaikuntanathan = phe.GentryHaleviVaikuntanathan
+	LyubashevskyPeikertRegev   = phe.LyubashevskyPeikertRegev
+	MLKEM                      = phe.MLKEM
+	GentrySahaiWaters          = phe.GentrySahaiWaters
 )
 
 // Boost names a transform upgrading a cryptosystem.
@@ -228,6 +247,8 @@ type config struct {
 	damgardJurikS  int
 	deterministic  bool
 	boost          Boost
+	primeOrder     bool
+	safePrimes     bool
 }
 
 // Option customises how a cryptosystem is built.
@@ -235,9 +256,10 @@ type Option func(*config)
 
 // WithKeySize sets the key size in bits. Ignored when existing keys are
 // supplied. For Regev, it is the lattice dimension. For
-// Brakerski-Vaikuntanathan, it is the ring degree. For Freeman-Boneh-Goh-Nissim,
-// it is the bit length of the field size. For Gentry-Halevi-Vaikuntanathan, it
-// is the lattice dimension in [2, 8].
+// Brakerski-Vaikuntanathan, Lyubashevsky-Peikert-Regev and Gentry-Sahai-Waters,
+// it is the ring degree. For ML-KEM, it is the parameter set: 512, 768 or
+// 1024. For Freeman-Boneh-Goh-Nissim, it is the bit length of the field size.
+// For Gentry-Halevi-Vaikuntanathan, it is the lattice dimension in [2, 8].
 func WithKeySize(bits int) Option {
 	return func(c *config) { c.keySize = bits }
 }
@@ -271,8 +293,8 @@ func WithCurve(form, curve string) Option {
 
 // WithPlaintextLimit sets an upper bound for plaintexts. It only affects
 // Benaloh, Sander-Young-Yung, Regev, Brakerski-Vaikuntanathan,
-// Freeman-Boneh-Goh-Nissim and Gentry-Halevi-Vaikuntanathan, which size their
-// message space around it.
+// Freeman-Boneh-Goh-Nissim, Gentry-Halevi-Vaikuntanathan and
+// Lyubashevsky-Peikert-Regev, which size their message space around it.
 func WithPlaintextLimit(limit *big.Int) Option {
 	return func(c *config) { c.plaintextLimit = limit }
 }
@@ -302,6 +324,20 @@ func WithDeterministic(deterministic bool) Option {
 // WithBoost upgrades the algorithm with a transform. See CatalanoFiore.
 func WithBoost(boost Boost) Option {
 	return func(c *config) { c.boost = boost }
+}
+
+// WithPrimeOrder picks the generator of a known prime order while generating
+// keys. Threshold decryption and zero-knowledge proofs require this. It only
+// affects ElGamal and Exponential-ElGamal.
+func WithPrimeOrder(primeOrder bool) Option {
+	return func(c *config) { c.primeOrder = primeOrder }
+}
+
+// WithSafePrimes generates the modulus as a product of two safe primes while
+// generating keys. Proofs of partial decryption in threshold decryption
+// require this. It only affects Paillier and Damgard-Jurik.
+func WithSafePrimes(safePrimes bool) Option {
+	return func(c *config) { c.safePrimes = safePrimes }
 }
 
 func newConfig(opts []Option) *config {
@@ -385,6 +421,9 @@ func build(algorithm phe.Algorithm, cfg *config) (phe.Homomorphic, error) {
 		if restoring {
 			return elgamal.FromJSON(cfg.keys, exponential)
 		}
+		if cfg.primeOrder {
+			return elgamal.GeneratePrimeOrder(cfg.keySize, exponential)
+		}
 		return elgamal.Generate(cfg.keySize, exponential)
 
 	case phe.EllipticCurveElGamal:
@@ -397,11 +436,17 @@ func build(algorithm phe.Algorithm, cfg *config) (phe.Homomorphic, error) {
 		if restoring {
 			return paillier.FromJSON(cfg.keys)
 		}
+		if cfg.safePrimes {
+			return paillier.GenerateSafe(cfg.keySize, cfg.maxTries)
+		}
 		return paillier.Generate(cfg.keySize)
 
 	case phe.DamgardJurik:
 		if restoring {
 			return damgardjurik.FromJSON(cfg.keys)
+		}
+		if cfg.safePrimes {
+			return damgardjurik.GenerateSafe(cfg.keySize, cfg.damgardJurikS, cfg.maxTries)
 		}
 		return damgardjurik.Generate(cfg.keySize, cfg.damgardJurikS)
 
@@ -507,6 +552,24 @@ func build(algorithm phe.Algorithm, cfg *config) (phe.Homomorphic, error) {
 		}
 		return gentryhalevivaikuntanathan.Generate(cfg.keySize, cfg.plaintextLimit)
 
+	case phe.LyubashevskyPeikertRegev:
+		if restoring {
+			return lyubashevskypeikertregev.FromJSON(cfg.keys)
+		}
+		return lyubashevskypeikertregev.Generate(cfg.keySize, cfg.plaintextLimit)
+
+	case phe.MLKEM:
+		if restoring {
+			return mlkem.FromJSON(cfg.keys)
+		}
+		return mlkem.Generate(cfg.keySize)
+
+	case phe.GentrySahaiWaters:
+		if restoring {
+			return gentrysahaiwaters.FromJSON(cfg.keys)
+		}
+		return gentrysahaiwaters.Generate(cfg.keySize)
+
 	default:
 		return nil, fmt.Errorf("lightphe: unimplemented algorithm %q", algorithm)
 	}
@@ -547,6 +610,11 @@ func (c *Cryptosystem) HasPrivateKey() bool { return c.cs.HasPrivateKey() }
 // The returned ciphertext carries only the public key, so it can be handed to
 // an untrusted evaluator as is.
 func (c *Cryptosystem) Encrypt(plaintext *big.Int) (*encrypted.Ciphertext, error) {
+	// Gentry-Sahai-Waters encrypts bits, so other integers are rejected rather
+	// than reduced to their parity
+	if c.algorithm == phe.GentrySahaiWaters && plaintext.Sign() != 0 && plaintext.Cmp(big.NewInt(1)) != 0 {
+		return nil, gentrysahaiwaters.ErrFloatNotSupported
+	}
 	m := phe.Normalize(plaintext, c.cs.PlaintextModulo())
 	value, err := c.cs.Encrypt(m)
 	if err != nil {
