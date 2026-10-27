@@ -85,6 +85,10 @@ const (
 	ArgmaxMaskedDifference = "masked_difference"
 	ArgmaxComparisons      = "comparisons"
 	ArgmaxProducts         = "products"
+
+	// ArgmaxEquality is sent during encrypted nearest neighbor search, which
+	// asks the client whether blinded values are zero.
+	ArgmaxEquality = "equality"
 )
 
 // ArgmaxMessage is a message the server sends to the client during encrypted
