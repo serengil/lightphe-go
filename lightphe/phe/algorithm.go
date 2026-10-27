@@ -31,6 +31,9 @@ const (
 	BrakerskiVaikuntanathan    Algorithm = "Brakerski-Vaikuntanathan"
 	FreemanBonehGohNissim      Algorithm = "Freeman-Boneh-Goh-Nissim"
 	GentryHaleviVaikuntanathan Algorithm = "Gentry-Halevi-Vaikuntanathan"
+	LyubashevskyPeikertRegev   Algorithm = "Lyubashevsky-Peikert-Regev"
+	MLKEM                      Algorithm = "ML-KEM"
+	GentrySahaiWaters          Algorithm = "Gentry-Sahai-Waters"
 )
 
 // String implements fmt.Stringer.
@@ -62,5 +65,8 @@ func Algorithms() []Algorithm {
 		BrakerskiVaikuntanathan,
 		FreemanBonehGohNissim,
 		GentryHaleviVaikuntanathan,
+		LyubashevskyPeikertRegev,
+		MLKEM,
+		GentrySahaiWaters,
 	}
 }
