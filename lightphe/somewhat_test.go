@@ -14,9 +14,10 @@ import (
 	"github.com/serengil/lightphe-go/lightphe/schemes/gentryhalevivaikuntanathan"
 )
 
-// Regev, Brakerski-Vaikuntanathan, Freeman-Boneh-Goh-Nissim and
-// Gentry-Halevi-Vaikuntanathan support integers only. All but Regev support
-// one multiplication of ciphertexts.
+// Regev, Brakerski-Vaikuntanathan, Freeman-Boneh-Goh-Nissim,
+// Gentry-Halevi-Vaikuntanathan and Lyubashevsky-Peikert-Regev support integers
+// only. All but Regev and Lyubashevsky-Peikert-Regev support one
+// multiplication of ciphertexts.
 
 type somewhatCase struct {
 	alg      phe.Algorithm
@@ -29,6 +30,7 @@ var somewhatCases = []somewhatCase{
 	{phe.BrakerskiVaikuntanathan, 64, true},
 	{phe.FreemanBonehGohNissim, 64, true},
 	{phe.GentryHaleviVaikuntanathan, 2, true},
+	{phe.LyubashevskyPeikertRegev, 64, false},
 }
 
 func TestSomewhatSchemesAPI(t *testing.T) {
