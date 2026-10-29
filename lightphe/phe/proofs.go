@@ -145,6 +145,58 @@ type RangeProof struct {
 	Proofs      []*ZKProof `json:"proofs"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler. Ciphertexts are decoded into
+// integers and tuples of them, and Cryptosystem.Deserialize restores the
+// curve points of EllipticCurve-ElGamal from their coordinates.
+func (p *RangeProof) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Ciphertexts []json.RawMessage `json:"ciphertexts"`
+		Proofs      []*ZKProof        `json:"proofs"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	ciphertexts := make([]Value, len(raw.Ciphertexts))
+	for i, item := range raw.Ciphertexts {
+		v, err := decodeRawValue(item)
+		if err != nil {
+			return err
+		}
+		ciphertexts[i] = v
+	}
+	p.Ciphertexts, p.Proofs = ciphertexts, raw.Proofs
+	return nil
+}
+
+// decodeRawValue decodes a value marshaled by MarshalJSON into an integer, a
+// tuple, or the point at infinity for null.
+func decodeRawValue(data json.RawMessage) (Value, error) {
+	data = bytes.TrimSpace(data)
+	switch {
+	case string(data) == "null":
+		return InfinityPoint(), nil
+	case len(data) > 0 && data[0] == '[':
+		var raw []json.RawMessage
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return nil, err
+		}
+		items := make([]Value, len(raw))
+		for i, item := range raw {
+			v, err := decodeRawValue(item)
+			if err != nil {
+				return nil, err
+			}
+			items[i] = v
+		}
+		return Tuple{Items: items}, nil
+	}
+	v := new(big.Int)
+	if err := json.Unmarshal(data, v); err != nil {
+		return nil, InvalidCiphertextf("decoding a ciphertext of a range proof: %v", err)
+	}
+	return Int{V: v}, nil
+}
+
 // OneHotProof proves that encrypted slots are a one-hot vector: each slot is
 // 0 or 1, and their sum is 1.
 type OneHotProof struct {

@@ -24,6 +24,9 @@ type Ciphertext struct {
 	// Value is the raw ciphertext payload. Send this over the wire and rebuild
 	// a Ciphertext on the other side with Cryptosystem.CreateCiphertext.
 	Value phe.Value
+
+	// pending is set by UnmarshalJSON until Restore binds the ciphertext.
+	pending *pendingCiphertext
 }
 
 // NewCiphertext binds a raw ciphertext payload to the cryptosystem that can
@@ -34,14 +37,24 @@ func NewCiphertext(cs phe.Homomorphic, value phe.Value) *Ciphertext {
 }
 
 // Algorithm reports which cryptosystem produced this ciphertext.
-func (c *Ciphertext) Algorithm() phe.Algorithm { return c.cs.Algorithm() }
+func (c *Ciphertext) Algorithm() phe.Algorithm {
+	if c.cs == nil && c.pending != nil {
+		return c.pending.algorithm
+	}
+	return c.cs.Algorithm()
+}
 
 // Scheme exposes the public cryptosystem bound to this ciphertext. It never
 // holds a private key.
 func (c *Ciphertext) Scheme() phe.Homomorphic { return c.cs }
 
 // String implements fmt.Stringer.
-func (c *Ciphertext) String() string { return "Ciphertext(" + c.Value.String() + ")" }
+func (c *Ciphertext) String() string {
+	if c.Value == nil {
+		return "Ciphertext(unbound)"
+	}
+	return "Ciphertext(" + c.Value.String() + ")"
+}
 
 // Add evaluates E(m1 + m2). It fails for schemes that are not additively
 // homomorphic.
@@ -71,6 +84,9 @@ func (c *Ciphertext) Multiply(other *Ciphertext) (*Ciphertext, error) {
 
 // MultiplyByConstant evaluates E(m * k) for a known integer k.
 func (c *Ciphertext) MultiplyByConstant(constant *big.Int) (*Ciphertext, error) {
+	if c.cs == nil {
+		return nil, ErrUnbound
+	}
 	value, err := c.cs.MultiplyByConstant(c.Value, constant)
 	if err != nil {
 		return nil, err
@@ -86,6 +102,9 @@ func (c *Ciphertext) MultiplyByInt(constant int64) (*Ciphertext, error) {
 // MultiplyByFloat evaluates E(m * k) for a known non-negative float k, which is
 // mapped onto the message space as a modular fraction first.
 func (c *Ciphertext) MultiplyByFloat(constant float64) (*Ciphertext, error) {
+	if c.cs == nil {
+		return nil, ErrUnbound
+	}
 	if err := phe.RejectsFloats(c.cs); err != nil {
 		return nil, err
 	}
@@ -127,6 +146,9 @@ func (c *Ciphertext) And(other *Ciphertext) (*Ciphertext, error) {
 
 // Reencrypt returns a different ciphertext for the same plaintext.
 func (c *Ciphertext) Reencrypt() (*Ciphertext, error) {
+	if c.cs == nil {
+		return nil, ErrUnbound
+	}
 	value, err := c.cs.Reencrypt(c.Value)
 	if err != nil {
 		return nil, err
@@ -143,6 +165,9 @@ func (c *Ciphertext) wrap(value phe.Value) *Ciphertext {
 func (c *Ciphertext) compatible(other *Ciphertext) error {
 	if other == nil {
 		return phe.InvalidCiphertextf("encrypted: nil operand")
+	}
+	if c.cs == nil || other.cs == nil {
+		return ErrUnbound
 	}
 	if c.cs.Algorithm() != other.cs.Algorithm() {
 		return phe.InvalidCiphertextf("encrypted: cannot combine a %s ciphertext with a %s one",

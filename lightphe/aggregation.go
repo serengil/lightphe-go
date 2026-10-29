@@ -53,16 +53,16 @@ func (l AggregationLayout) Equal(other AggregationLayout) bool {
 // EncryptedUpdate is an encrypted model update, or an encrypted sum of Count
 // updates: chunks of packed values and the layout of packing.
 type EncryptedUpdate struct {
-	Chunks []*encrypted.Ciphertext
-	Layout AggregationLayout
-	Count  int
+	Chunks []*encrypted.Ciphertext `json:"chunks"`
+	Layout AggregationLayout       `json:"layout"`
+	Count  int                     `json:"count"`
 }
 
 // Aggregate is the decrypted sum and mean of Count model updates.
 type Aggregate struct {
-	Sum   []float64
-	Mean  []float64
-	Count int
+	Sum   []float64 `json:"sum"`
+	Mean  []float64 `json:"mean"`
+	Count int       `json:"count"`
 }
 
 func (c *Cryptosystem) requireAggregationSupport() error {
