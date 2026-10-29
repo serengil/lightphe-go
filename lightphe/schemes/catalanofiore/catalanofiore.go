@@ -373,6 +373,33 @@ func multipliedValue(alpha phe.Value, pairs [][2]phe.Value) phe.Value {
 	return phe.NewTuple(phe.Int{V: big.NewInt(tagMultiplied)}, alpha, phe.Tuple{Items: items})
 }
 
+// Parts are the components of a ciphertext of the transform: a and Enc(b) of
+// a non-multiplied ciphertext, or alpha and the pairs of a multiplied one.
+type Parts struct {
+	Multiplied bool
+	A          *big.Int
+	Beta       phe.Value
+	Alpha      phe.Value
+	Pairs      [][2]phe.Value
+}
+
+// Split returns the components of a ciphertext of the transform.
+func Split(v phe.Value) (Parts, error) {
+	p, err := parse(v)
+	if err != nil {
+		return Parts{}, err
+	}
+	return Parts{Multiplied: p.multiplied, A: p.a, Beta: p.beta, Alpha: p.alpha, Pairs: p.pairs}, nil
+}
+
+// Join builds a ciphertext of the transform from its components.
+func Join(p Parts) phe.Value {
+	if p.Multiplied {
+		return multipliedValue(p.Alpha, p.Pairs)
+	}
+	return fresh(p.A, p.Beta)
+}
+
 // IsFresh reports whether a value is a ciphertext of the transform that can
 // be multiplied, i.e. it is not the result of a multiplication.
 func IsFresh(v phe.Value) bool {

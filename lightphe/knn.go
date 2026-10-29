@@ -36,22 +36,22 @@ import (
 // EncryptedQuery is a query vector encrypted for nearest neighbor search:
 // ciphertexts of its entries and of its squared norm.
 type EncryptedQuery struct {
-	Query []*encrypted.Ciphertext
-	Norm  *encrypted.Ciphertext
+	Query []*encrypted.Ciphertext `json:"query"`
+	Norm  *encrypted.Ciphertext   `json:"norm"`
 }
 
 // KNNResult holds the encrypted indices of the nearest vectors from the
 // nearest one, and their encrypted labels if labels are given.
 type KNNResult struct {
-	Indices []*encrypted.Ciphertext
-	Labels  []*encrypted.Ciphertext
+	Indices []*encrypted.Ciphertext `json:"indices"`
+	Labels  []*encrypted.Ciphertext `json:"labels,omitempty"`
 }
 
 // NearestNeighbors holds the indices of the nearest vectors from the nearest
 // one, and their squared distances.
 type NearestNeighbors struct {
-	Indices   []int
-	Distances []*big.Int
+	Indices   []int      `json:"indices"`
+	Distances []*big.Int `json:"distances"`
 }
 
 // zeroTester checks that a ciphertext encrypts zero without decrypting it

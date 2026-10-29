@@ -38,6 +38,9 @@ type Tensor struct {
 
 	cs        phe.Homomorphic
 	precision int
+
+	// pending is set by UnmarshalJSON until Restore binds the tensor.
+	pending *pendingTensor
 }
 
 // NewTensor binds a slice of fractions to the cryptosystem that can evaluate on
@@ -62,6 +65,9 @@ func (t *Tensor) Scheme() phe.Homomorphic { return t.cs }
 // determined without decrypting, so the result is reported as positive and the
 // caller reads the modular representative. Same-sign additions are exact.
 func (t *Tensor) Add(other *Tensor) (*Tensor, error) {
+	if t.cs == nil {
+		return nil, ErrUnbound
+	}
 	if other == nil || len(t.Fractions) != len(other.Fractions) {
 		return nil, fmt.Errorf("encrypted: tensor sizes must match for addition")
 	}
@@ -102,6 +108,9 @@ func (t *Tensor) Add(other *Tensor) (*Tensor, error) {
 // Multiply evaluates the element-wise product of two encrypted tensors. It
 // needs a multiplicatively homomorphic cryptosystem such as RSA.
 func (t *Tensor) Multiply(other *Tensor) (*Tensor, error) {
+	if t.cs == nil {
+		return nil, ErrUnbound
+	}
 	if other == nil || len(t.Fractions) != len(other.Fractions) {
 		return nil, fmt.Errorf("encrypted: tensor sizes must match for multiplication")
 	}
@@ -144,6 +153,9 @@ func (t *Tensor) Multiply(other *Tensor) (*Tensor, error) {
 // than 7.3521. Integer-valued elements, and constants whose denominator divides
 // the scale factor, are exact.
 func (t *Tensor) MultiplyByConstant(constant float64) (*Tensor, error) {
+	if t.cs == nil {
+		return nil, ErrUnbound
+	}
 	if t.cs.Algorithm() == phe.JoyeLibert && constant != math.Trunc(constant) {
 		return nil, joyelibert.ErrFloatNotSupported
 	}
@@ -183,6 +195,9 @@ func (t *Tensor) MultiplyByConstant(constant float64) (*Tensor, error) {
 // vectors must be non-negative: the sign bookkeeping only works when the
 // magnitudes are known to be the values themselves.
 func (t *Tensor) MultiplyByPlain(plain []float64) (*Tensor, error) {
+	if t.cs == nil {
+		return nil, ErrUnbound
+	}
 	if len(t.Fractions) != len(plain) {
 		return nil, fmt.Errorf("encrypted: tensor sizes must match for element-wise multiplication")
 	}

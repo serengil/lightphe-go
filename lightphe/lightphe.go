@@ -651,6 +651,9 @@ func (c *Cryptosystem) Decrypt(ciphertext *encrypted.Ciphertext) (*big.Int, erro
 	if ciphertext == nil {
 		return nil, phe.InvalidCiphertextf("lightphe: nil ciphertext")
 	}
+	if ciphertext.Scheme() == nil {
+		return nil, encrypted.ErrUnbound
+	}
 	if !c.cs.HasPrivateKey() {
 		return nil, phe.ErrMissingPrivateKey
 	}

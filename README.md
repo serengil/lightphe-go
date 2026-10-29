@@ -235,6 +235,62 @@ Export the public key, hand it to the evaluator, and keep the private key at hom
 	}
 ```
 
+### Sending ciphertexts over network
+
+Ciphertexts, proofs and messages of interactive protocols can be serialized into json to be sent to
+another party. Keys are never serialized, the receiver restores ciphertexts with its own public key.
+`Deserialize` fills any target having ciphertexts in it, e.g. a ciphertext with its proof, an encrypted
+update for secure aggregation, or a message sent to the `client` callback of encrypted argmax and
+nearest neighbor search. Ciphertexts are encoded in the format of the Python library, so a Go party
+and a Python party can talk to each other.
+
+```go
+	// client encrypts its value and sends it to the server
+	clientCs, _ := lightphe.New(lightphe.Paillier)
+	c, _ := clientCs.EncryptInt(17)
+	data, _ := clientCs.Serialize(c)
+
+	// server restores the ciphertext with the client's public key only, and computes on it
+	publicKey, _ := clientCs.Keys(true)
+	serverCs, _ := lightphe.New(lightphe.Paillier, lightphe.WithKeys(publicKey))
+	var received *lightphe.Ciphertext
+	_ = serverCs.Deserialize(data, &received)
+	c25, _ := serverCs.EncryptInt(25)
+	sum, _ := received.Add(c25)
+	response, _ := serverCs.Serialize(sum)
+
+	// client decrypts the response
+	var result *lightphe.Ciphertext
+	_ = clientCs.Deserialize(response, &result)
+	m, _ := clientCs.Decrypt(result)
+	if m.Int64() != 42 {
+		panic("homomorphic addition failed")
+	}
+```
+
+`Ciphertext` and `Tensor` implement `json.Marshaler`, so they can be a part of any message. A message
+decoded with `json.Unmarshal` elsewhere, e.g. by a web framework, has its ciphertexts bound to the
+receiver's public key with `Restore`. To run an interactive protocol across machines, wrap the network
+call with the `client` callback:
+
+```go
+	client := func(message lightphe.ArgmaxMessage) ([]*big.Int, error) {
+		// e.g. an http request to the client, which answers with
+		// clientCs.Serialize(clientCs.AnswerKNN(message))
+		body, _ := serverCs.Serialize(message)
+		resp, err := http.Post(clientURL, "application/json", bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		answer, _ := io.ReadAll(resp.Body)
+		var out []*big.Int
+		return out, serverCs.Deserialize(answer, &out)
+	}
+
+	result, _ := serverCs.EvaluateKNN(encryptedQuery, gallery, 2, 16, client, nil)
+```
+
 ### Elliptic curve cryptography
 
 The `ecc` package implements curve arithmetic over prime and binary fields in three forms —
