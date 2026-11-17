@@ -1364,6 +1364,8 @@ questions get settled up front.
 | **Java** | [`lightphe4j`](https://github.com/serengil/lightphe4j) | Enterprise, Banking & Legacy Systems |
 | **TypeScript** | [`lightphe-ts`](https://github.com/serengil/lightphe-ts) | Client-Side Privacy & Node.js Backend |
 
+To see how the ports compare in speed, memory and package footprint across security levels, see [`lightphe-benchmarks`](https://github.com/serengil/lightphe-benchmarks).
+
 ## Citation
 
 Please cite LightPHE in your publications if it helps your research:
